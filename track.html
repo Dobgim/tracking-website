@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Track your Prestige Freight Cargo shipment in real-time. Enter your tracking number to get instant status updates and live map tracking.">
+    <title>Track Package – Prestige Freight Cargo</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="images/logo.png" type="image/png">
+    <style>
+        /* ===== INVOICE & MAP STYLES ===== */
+        .track-section { padding: 60px 0 80px; }
+
+        .invoice-container {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-top: 30px;
+            animation: fadeInUp 0.6s ease;
+        }
+        .invoice-header {
+            background: linear-gradient(135deg, var(--primary) 0%, #162a4a 100%);
+            padding: 28px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            border-bottom: 2px solid var(--accent);
+        }
+        .invoice-header .logo-side {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .invoice-header .logo-side img { height: 40px; }
+        .invoice-header .logo-side h2 { font-size: 1.3rem; color: #fff; }
+        .invoice-header .logo-side h2 span { color: var(--accent); }
+        .invoice-header .tracking-num {
+            text-align: right;
+        }
+        .invoice-header .tracking-num h3 {
+            font-size: 1.4rem;
+            color: var(--accent);
+            letter-spacing: 1px;
+        }
+        .invoice-header .tracking-num p { color: var(--text-muted); font-size: 0.85rem; }
+
+        .invoice-body { padding: 28px 32px; }
+
+        /* Status Banner */
+        .status-banner {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 28px;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .status-banner.pending { background: rgba(234,179,8,0.12); color: #facc15; border: 1px solid rgba(234,179,8,0.25); }
+        .status-banner.picked-up { background: rgba(139,92,246,0.12); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+        .status-banner.in-transit { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+        .status-banner.out-for-delivery { background: rgba(249,115,22,0.12); color: #fb923c; border: 1px solid rgba(249,115,22,0.25); }
+        .status-banner.delivered { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+        .status-banner.on-hold { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+        .status-banner.returned { background: rgba(168,85,247,0.12); color: #c084fc; border: 1px solid rgba(168,85,247,0.25); }
+        .status-banner.cancelled { background: rgba(107,114,128,0.12); color: #9ca3af; border: 1px solid rgba(107,114,128,0.25); }
+        .status-banner .status-icon { font-size: 1.5rem; }
+        .status-banner .status-text span { font-weight: 400; color: var(--text-muted); font-size: 0.85rem; display: block; margin-top: 2px; }
+
+        /* Progress Bar */
+        .progress-tracker {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding: 0 8px;
+            position: relative;
+        }
+        .progress-tracker::before {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 30px;
+            right: 30px;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            z-index: 0;
+        }
+        .progress-tracker .progress-fill {
+            position: absolute;
+            top: 18px;
+            left: 30px;
+            height: 3px;
+            background: var(--accent);
+            z-index: 1;
+            transition: width 0.8s ease;
+        }
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            z-index: 2;
+        }
+        .progress-step .step-dot {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            border: 2px solid rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        .progress-step.done .step-dot {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+        }
+        .progress-step.current .step-dot {
+            background: transparent;
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 12px rgba(200,161,78,0.4);
+            animation: pulseGlow 2s infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 8px rgba(200,161,78,0.3); }
+            50% { box-shadow: 0 0 20px rgba(200,161,78,0.6); }
+        }
+        .progress-step .step-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-align: center;
+            max-width: 70px;
+        }
+        .progress-step.done .step-label,
+        .progress-step.current .step-label { color: var(--accent); }
+
+        /* Invoice Details Grid */
+        .invoice-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+        .invoice-block h4 {
+            color: var(--accent);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(200,161,78,0.2);
+        }
+        .invoice-block .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.88rem;
+        }
+        .invoice-block .detail-row label { color: var(--text-muted); }
+        .invoice-block .detail-row span { font-weight: 500; }
+
+        /* Package Info Table */
+        .package-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 28px;
+        }
+        .package-table th {
+            background: rgba(200,161,78,0.1);
+            color: var(--accent);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(200,161,78,0.2);
+        }
+        .package-table td {
+            padding: 14px 16px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Timeline */
+        .invoice-timeline { margin-bottom: 28px; }
+        .invoice-timeline h4 {
+            color: var(--accent);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 16px;
+        }
+        .inv-tl-item {
+            display: flex;
+            gap: 16px;
+            padding: 12px 0;
+            border-left: 2px solid rgba(200,161,78,0.3);
+            margin-left: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+        .inv-tl-item::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 16px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(200,161,78,0.4);
+            border: 2px solid var(--primary);
+        }
+        .inv-tl-item.latest::before {
+            background: var(--accent);
+            box-shadow: 0 0 8px rgba(200,161,78,0.5);
+        }
+        .inv-tl-item .tl-date {
+            min-width: 90px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .inv-tl-item .tl-info .tl-event { font-weight: 500; font-size: 0.9rem; }
+        .inv-tl-item .tl-info .tl-loc { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+
+        /* Invoice Footer */
+        .invoice-footer {
+            padding: 20px 32px;
+            border-top: 1px solid rgba(200,161,78,0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .invoice-footer .powered { color: var(--accent); font-weight: 600; }
+
+        /* Map Container */
+        .map-container {
+            margin-top: 30px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+        .map-header {
+            background: var(--glass-bg);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .map-header h3 { font-size: 1rem; }
+        .map-header h3 span { color: var(--accent); }
+        .map-header .route-info { font-size: 0.85rem; color: var(--text-muted); }
+        .map-iframe-wrap {
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
+        .map-iframe-wrap iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Print Invoice Button */
+        .print-btn {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+        .print-btn:hover { background: var(--accent); color: #000; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .invoice-header { flex-direction: column; text-align: center; padding: 20px; }
+            .invoice-header .tracking-num { text-align: center; }
+            .invoice-body { padding: 20px 16px; }
+            .invoice-grid { grid-template-columns: 1fr; gap: 16px; }
+            .progress-tracker { overflow-x: auto; padding-bottom: 8px; }
+            .progress-step .step-label { font-size: 0.65rem; max-width: 55px; }
+            .progress-step .step-dot { width: 28px; height: 28px; font-size: 0.75rem; }
+            .status-banner { flex-direction: column; text-align: center; padding: 14px; }
+            .inv-tl-item { flex-direction: column; gap: 4px; }
+            .map-iframe-wrap { height: 300px; }
+            .invoice-footer { flex-direction: column; text-align: center; }
+            .package-table, .package-table thead, .package-table tbody, .package-table th, .package-table td, .package-table tr {
+                display: block;
+            }
+            .package-table thead { display: none; }
+            .package-table td { padding: 8px 16px; text-align: right; position: relative; padding-left: 50%; }
+            .package-table td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 16px;
+                font-weight: 600;
+                color: var(--accent);
+                font-size: 0.78rem;
+                text-transform: uppercase;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="preloader" id="preloader"><div class="preloader-spinner"></div></div>
+
+    <nav class="navbar" id="navbar">
+        <div class="container">
+            <a href="index.html" class="nav-logo">
+                <img src="images/logo.png" alt="Prestige Freight Cargo Logo">
+                <span class="nav-logo-text">Prestige <span>Freight Cargo</span></span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="index.html">Home</a>
+                <a href="about.html">About Us</a>
+                <a href="services.html">Services</a>
+                <a href="track.html" class="active">Track Package</a>
+                <a href="contact.html">Contact Us</a>
+                <a href="track.html" class="btn btn-primary nav-cta">Track Now</a>
+            </div>
+            <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+        </div>
+    </nav>
+
+    <section class="page-banner">
+        <div class="container">
+            <h1>Track Your Package</h1>
+            <p>Enter your tracking number below to get real-time updates on your shipment status.</p>
+            <div class="breadcrumb">
+                <a href="index.html">Home</a><span>/</span><span>Track Package</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="track-section">
+        <div class="container">
+            <div class="track-form-container reveal">
+                <h2>📦 Shipment Tracker</h2>
+                <p>Enter your tracking ID to see detailed shipment information, live status updates, and route map.</p>
+                <form id="trackForm">
+                    <div class="track-input-group">
+                        <input type="text" id="trackingInput" placeholder="Enter tracking number (e.g., PF-2026-001)" required autocomplete="off">
+                        <button type="submit" class="btn btn-primary">Track</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Professional Invoice Result -->
+            <div id="trackResult" style="display:none;">
+                <!-- Invoice -->
+                <div class="invoice-container" id="invoiceContainer">
+                    <div class="invoice-header">
+                        <div class="logo-side">
+                            <img src="images/logo.png" alt="Logo">
+                            <h2>Prestige <span>Freight Cargo</span></h2>
+                        </div>
+                        <div class="tracking-num">
+                            <h3 id="invTrackId"></h3>
+                            <p id="invType"></p>
+                        </div>
+                    </div>
+
+                    <div class="invoice-body">
+                        <!-- Status Banner -->
+                        <div class="status-banner" id="statusBanner">
+                            <span class="status-icon" id="statusIcon"></span>
+                            <div class="status-text">
+                                <strong id="statusLabel"></strong>
+                                <span id="statusDesc"></span>
+                            </div>
+                        </div>
+
+                        <!-- Progress Tracker -->
+                        <div class="progress-tracker" id="progressTracker"></div>
+
+                        <!-- Invoice Details -->
+                        <div class="invoice-grid">
+                            <div class="invoice-block">
+                                <h4>📤 Sender Information</h4>
+                                <div class="detail-row"><label>Name</label><span id="invSender">—</span></div>
+                                <div class="detail-row"><label>Email</label><span id="invSenderEmail">—</span></div>
+                                <div class="detail-row"><label>Phone</label><span id="invSenderNumber">—</span></div>
+                                <div class="detail-row"><label>Origin</label><span id="invOrigin">—</span></div>
+                            </div>
+                            <div class="invoice-block">
+                                <h4>📥 Receiver Information</h4>
+                                <div class="detail-row"><label>Name</label><span id="invReceiver">—</span></div>
+                                <div class="detail-row"><label>Email</label><span id="invReceiverEmail">—</span></div>
+                                <div class="detail-row"><label>Phone</label><span id="invReceiverNumber">—</span></div>
+                                <div class="detail-row"><label>Destination</label><span id="invDestination">—</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Package Details -->
+                        <table class="package-table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Weight</th>
+                                    <th>Ship Date</th>
+                                    <th>Est. Delivery</th>
+                                    <th>Type</th>
+                                    <th>Piece Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="packageTableBody"></tbody>
+                        </table>
+
+                        <!-- Timeline -->
+                        <div class="invoice-timeline">
+                            <h4>📍 Shipment Timeline</h4>
+                            <div id="invTimeline"></div>
+                        </div>
+                    </div>
+
+                    <div class="invoice-footer">
+                        <div>
+                            <span class="powered">Prestige Freight Cargo</span> · Premium Logistics & Freight Solutions
+                        </div>
+                        <button class="print-btn" onclick="window.print()">🖨️ Print Invoice</button>
+                    </div>
+                </div>
+
+                <!-- Google Maps Route -->
+                <div class="map-container" id="mapContainer">
+                    <div class="map-header">
+                        <h3>🗺️ Live <span>Route Map</span></h3>
+                        <div class="route-info" id="routeInfo"></div>
+                    </div>
+                    <div class="map-iframe-wrap">
+                        <div id="googleMap" style="width:100%; height:450px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- No Result -->
+            <div id="trackNoResult" style="display:none;">
+                <div class="track-form-container" style="text-align:center; padding:50px 30px; margin-top:30px;">
+                    <div style="font-size:3.5rem; margin-bottom:16px;">🔍</div>
+                    <h3 style="margin-bottom:10px; font-size:1.3rem;">No Shipment Found</h3>
+                    <p style="color:var(--text-muted); max-width:400px; margin:0 auto;">Please double-check your tracking number and try again. If the issue persists, <a href="contact.html" style="color:var(--accent);">contact our support team</a>.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-box reveal">
+                <h2>Need Help With Your Shipment?</h2>
+                <p>Our support team is available 24/7 to assist you with any questions about your delivery.</p>
+                <a href="contact.html" class="btn btn-white" style="position:relative;">Contact Support →</a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-about">
+                    <a href="index.html" class="nav-logo"><img src="images/logo.png" alt="Prestige Freight Cargo"><span class="nav-logo-text">Prestige <span>Freight Cargo</span></span></a>
+                    <p>Prestige Freight Cargo provides secure, efficient, and timely transport solutions.</p>
+                    <div class="footer-socials"><a href="#">f</a><a href="#">𝕏</a><a href="#">📷</a><a href="#">in</a></div>
+                </div>
+                <div class="footer-links"><h4>Quick Links</h4><ul><li><a href="index.html">Home</a></li><li><a href="about.html">About Us</a></li><li><a href="services.html">Services</a></li><li><a href="track.html">Track Package</a></li><li><a href="contact.html">Contact</a></li></ul></div>
+                <div class="footer-links"><h4>Services</h4><ul><li><a href="services.html">Air Freight</a></li><li><a href="services.html">Sea Freight</a></li><li><a href="services.html">Land Transport</a></li><li><a href="services.html">Custom Clearance</a></li><li><a href="services.html">Warehousing</a></li></ul></div>
+                <div class="footer-links"><h4>Contact Info</h4><ul><li><a href="mailto:contact@prestigefreightcargo.com">📧 contact@prestigefreightcargo.com</a></li><li><a href="tel:+1234567890">📞 +1 (234) 567-890</a></li><li><a href="#">📍 1245 Transport Ave, Suite 300</a></li></ul></div>
+            </div>
+            <div class="footer-bottom"><p>&copy; 2026 Prestige Freight Cargo. All Rights Reserved.</p></div>
+        </div>
+    </footer>
+    <div class="toast" id="toast"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js?v=3"></script>
+    <script src="js/main.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBpxYpVUtQlXjQgBCJNDvLkADlgTQ9IbLs&libraries=places"></script>
+    <script src="js/track.js?v=3"></script>
+    <!-- Start of LiveChat (www.livechat.com) code -->
+    <script>
+        window.__lc = window.__lc || {};
+        window.__lc.license = 19613832;
+        window.__lc.integration_name = "manual_channels";
+        window.__lc.product_name = "livechat";
+        ;(function(n,t,c){function i(n){return e._h?e._h.apply(null,n):e._q.push(n)}var e={_q:[],_h:null,_v:"2.0",on:function(){i(["on",c.call(arguments)])},once:function(){i(["once",c.call(arguments)])},off:function(){i(["off",c.call(arguments)])},get:function(){if(!e._h)throw new Error("[LiveChatWidget] You can't use getters before load.");return i(["get",c.call(arguments)])},call:function(){i(["call",c.call(arguments)])},init:function(){var n=t.createElement("script");n.async=!0,n.type="text/javascript",n.src="https://cdn.livechatinc.com/tracking.js",t.head.appendChild(n)}};!n.__lc.asyncInit&&e.init(),n.LiveChatWidget=n.LiveChatWidget||e}(window,document,[].slice))
+    </script>
+    <noscript><a href="https://www.livechat.com/chat-with/19613832/" rel="nofollow">Chat with us</a>, powered by <a href="https://www.livechat.com/?welcome" rel="noopener nofollow" target="_blank">LiveChat</a></noscript>
+    <!-- End of LiveChat code -->
+</body>
+</html>

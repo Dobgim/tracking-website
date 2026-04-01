@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard – Prestige Freight Cargo</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="icon" href="images/logo.png" type="image/png">
+</head>
+<body>
+    <!-- Admin Sidebar -->
+    <div class="admin-layout">
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="sidebar-header">
+                <a href="index.html" class="nav-logo">
+                    <img src="images/logo.png" alt="Logo" style="height:35px;">
+                    <span class="nav-logo-text" style="font-size:1.1rem;">Prestige <span>Freight Cargo</span></span>
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="sidebar-link active" data-section="dashboard">
+                    <span class="sidebar-icon">📊</span> Dashboard
+                </a>
+                <a href="#" class="sidebar-link" data-section="shipments">
+                    <span class="sidebar-icon">📦</span> Shipments
+                </a>
+                <a href="#" class="sidebar-link" data-section="add-shipment">
+                    <span class="sidebar-icon">➕</span> Add Shipment
+                </a>
+                <a href="#" class="sidebar-link" data-section="messages">
+                    <span class="sidebar-icon">💬</span> Messages
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-outline" style="width:100%; justify-content:center; font-size:0.85rem; padding:10px;" id="logoutBtn">🚪 Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <header class="admin-header">
+                <div class="admin-header-left">
+                    <button class="admin-menu-toggle" id="adminMenuToggle">☰</button>
+                    <h2 id="pageTitle">Dashboard</h2>
+                </div>
+                <div class="admin-header-right">
+                    <span style="color:var(--text-muted); font-size:0.88rem;">Welcome, Admin</span>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <div class="admin-section active" id="section-dashboard">
+                <div class="admin-stats-grid">
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" style="background:rgba(59,130,246,0.15); color:#60a5fa;">📦</div>
+                        <div>
+                            <h3 id="totalShipments">0</h3>
+                            <p>Total Shipments</p>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" style="background:rgba(234,179,8,0.15); color:#facc15;">🔄</div>
+                        <div>
+                            <h3 id="inTransitCount">0</h3>
+                            <p>In Transit</p>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" style="background:rgba(34,197,94,0.15); color:#4ade80;">✅</div>
+                        <div>
+                            <h3 id="deliveredCount">0</h3>
+                            <p>Delivered</p>
+                        </div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <div class="admin-stat-icon" style="background:rgba(239,68,68,0.15); color:#f87171;">⏸️</div>
+                        <div>
+                            <h3 id="onHoldCount">0</h3>
+                            <p>On Hold</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-card" style="margin-top:30px;">
+                    <div class="admin-card-header">
+                        <h3>Recent Shipments</h3>
+                        <a href="#" class="sidebar-link" data-section="shipments" style="color:var(--accent); font-size:0.88rem;">View All →</a>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table" id="recentShipmentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Tracking ID</th>
+                                    <th>Sender</th>
+                                    <th>Receiver</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shipments Section -->
+            <div class="admin-section" id="section-shipments">
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <h3>All Shipments</h3>
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            <select id="filterStatus" class="admin-select">
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="picked-up">Picked Up</option>
+                                <option value="in-transit">In Transit</option>
+                                <option value="out-for-delivery">Out for Delivery</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="on-hold">On Hold</option>
+                                <option value="returned">Returned</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                            <input type="text" id="searchShipments" placeholder="Search..." class="admin-search">
+                        </div>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table" id="allShipmentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Tracking ID</th>
+                                    <th>Sender</th>
+                                    <th>Receiver</th>
+                                    <th>Origin</th>
+                                    <th>Destination</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Shipment Section -->
+            <div class="admin-section" id="section-add-shipment">
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <h3 id="formTitle">Add New Shipment</h3>
+                    </div>
+                    <form id="shipmentForm" class="admin-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Tracking ID</label>
+                                <input type="text" id="shipTrackingId" placeholder="Auto-generated" readonly style="opacity:0.6;">
+                            </div>
+                            <div class="form-group">
+                                <label>Shipment Type *</label>
+                                <select id="shipType" required>
+                                    <option value="">Select type</option>
+                                    <option value="Air Freight">Air Freight</option>
+                                    <option value="Sea Freight">Sea Freight</option>
+                                    <option value="Land Transport">Land Transport</option>
+                                    <option value="Express Courier">Express Courier</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sender Name *</label>
+                                <input type="text" id="shipSender" placeholder="Sender name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Receiver Name *</label>
+                                <input type="text" id="shipReceiver" placeholder="Receiver name" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sender Email</label>
+                                <input type="email" id="shipSenderEmail" placeholder="sender@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Receiver Email</label>
+                                <input type="email" id="shipReceiverEmail" placeholder="receiver@example.com">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sender Number</label>
+                                <input type="tel" id="shipSenderNumber" placeholder="e.g. +1 234 567 8900">
+                            </div>
+                            <div class="form-group">
+                                <label>Receiver Number</label>
+                                <input type="tel" id="shipReceiverNumber" placeholder="e.g. +1 987 654 3210">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Origin *</label>
+                                <input type="text" id="shipOrigin" placeholder="City, Country" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Destination *</label>
+                                <input type="text" id="shipDest" placeholder="City, Country" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Weight (kg) *</label>
+                                <input type="number" id="shipWeight" placeholder="0.0" step="0.1" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Status *</label>
+                                <select id="shipStatus" required>
+                                    <option value="pending">Pending</option>
+                                    <option value="picked-up">Picked Up</option>
+                                    <option value="in-transit">In Transit</option>
+                                    <option value="out-for-delivery">Out for Delivery</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="on-hold">On Hold</option>
+                                    <option value="returned">Returned</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Ship Date *</label>
+                                <input type="date" id="shipDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Expected Delivery Date</label>
+                                <input type="date" id="shipDeliveryDate">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Expected Delivery Time</label>
+                                <input type="time" id="shipDeliveryTime" placeholder="e.g. 14:00">
+                            </div>
+                            <div class="form-group">
+                                <label>Piece Type</label>
+                                <input type="text" id="shipPieceType" placeholder="e.g. Carton, Crate, Pallet">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Package Description</label>
+                            <textarea id="shipDescription" placeholder="Describe the package contents..." rows="3"></textarea>
+                        </div>
+
+                        <!-- Timeline Events -->
+                        <div class="admin-card-header" style="margin-top:20px; margin-bottom:16px;">
+                            <h4>Timeline Events</h4>
+                            <button type="button" class="btn btn-outline" style="padding:8px 16px; font-size:0.82rem;" id="addTimelineBtn">+ Add Event</button>
+                        </div>
+                        <div id="timelineEvents"></div>
+
+                        <div style="display:flex; gap:12px; margin-top:24px;">
+                            <button type="submit" class="btn btn-primary">💾 Save Shipment</button>
+                            <button type="button" class="btn btn-outline" id="cancelEdit" style="display:none;">Cancel Edit</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Messages Section -->
+            <div class="admin-section" id="section-messages">
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <h3>Contact Messages</h3>
+                    </div>
+                    <div id="messagesList" class="messages-list">
+                        <div style="text-align:center; padding:40px; color:var(--text-muted);">
+                            <div style="font-size:2rem; margin-bottom:12px;">💬</div>
+                            <p>No messages yet. Messages from the contact form will appear here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="admin-modal" id="editModal">
+        <div class="admin-modal-content">
+            <div class="admin-modal-header">
+                <h3>Update Shipment Status</h3>
+                <button class="admin-modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="admin-modal-body">
+                <div class="form-group">
+                    <label>Tracking ID</label>
+                    <input type="text" id="modalTrackId" readonly style="opacity:0.6;">
+                </div>
+                <div class="form-group">
+                    <label>New Status</label>
+                    <select id="modalStatus">
+                        <option value="pending">Pending</option>
+                        <option value="picked-up">Picked Up</option>
+                        <option value="in-transit">In Transit</option>
+                        <option value="out-for-delivery">Out for Delivery</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="on-hold">On Hold</option>
+                        <option value="returned">Returned</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div id="modalTimelinePreview" style="margin-bottom:16px;"></div>
+                </div>
+                <div class="form-group">
+                    <label>Add Timeline Event</label>
+                    <input type="text" id="modalEvent" placeholder="e.g., Arrived at distribution center">
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="modalLocation" placeholder="e.g., New York, USA">
+                </div>
+                <button class="btn btn-primary" style="width:100%; justify-content:center;" id="saveStatusBtn">Update Status</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script type="text/javascript">
+      (function(){
+          emailjs.init({
+            publicKey: "6B9z0MJv-2mCrZp_M",
+          });
+      })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
