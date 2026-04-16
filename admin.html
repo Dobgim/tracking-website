@@ -20,20 +20,20 @@
             </div>
             <nav class="sidebar-nav">
                 <a href="#" class="sidebar-link active" data-section="dashboard">
-                    <span class="sidebar-icon">📊</span> Dashboard
+                    <span class="sidebar-icon"><i data-lucide="layout-dashboard"></i></span> Dashboard
                 </a>
                 <a href="#" class="sidebar-link" data-section="shipments">
-                    <span class="sidebar-icon">📦</span> Shipments
+                    <span class="sidebar-icon"><i data-lucide="package"></i></span> Shipments
                 </a>
                 <a href="#" class="sidebar-link" data-section="add-shipment">
-                    <span class="sidebar-icon">➕</span> Add Shipment
+                    <span class="sidebar-icon"><i data-lucide="plus-circle"></i></span> Add Shipment
                 </a>
                 <a href="#" class="sidebar-link" data-section="messages">
-                    <span class="sidebar-icon">💬</span> Messages
+                    <span class="sidebar-icon"><i data-lucide="message-square"></i></span> Messages
                 </a>
             </nav>
             <div class="sidebar-footer">
-                <button class="btn btn-outline" style="width:100%; justify-content:center; font-size:0.85rem; padding:10px;" id="logoutBtn">🚪 Logout</button>
+                <button class="btn btn-outline" style="width:100%; justify-content:center; font-size:0.85rem; padding:10px; display:flex; align-items:center; gap:8px;" id="logoutBtn"><i data-lucide="log-out"></i> Logout</button>
             </div>
         </aside>
 
@@ -41,7 +41,7 @@
         <main class="admin-main">
             <header class="admin-header">
                 <div class="admin-header-left">
-                    <button class="admin-menu-toggle" id="adminMenuToggle">☰</button>
+                    <button class="admin-menu-toggle" id="adminMenuToggle"><i data-lucide="menu"></i></button>
                     <h2 id="pageTitle">Dashboard</h2>
                 </div>
                 <div class="admin-header-right">
@@ -53,28 +53,28 @@
             <div class="admin-section active" id="section-dashboard">
                 <div class="admin-stats-grid">
                     <div class="admin-stat-card">
-                        <div class="admin-stat-icon" style="background:rgba(59,130,246,0.15); color:#60a5fa;">📦</div>
+                        <div class="admin-stat-icon" style="background:rgba(59,130,246,0.15); color:#60a5fa;"><i data-lucide="package"></i></div>
                         <div>
                             <h3 id="totalShipments">0</h3>
                             <p>Total Shipments</p>
                         </div>
                     </div>
                     <div class="admin-stat-card">
-                        <div class="admin-stat-icon" style="background:rgba(234,179,8,0.15); color:#facc15;">🔄</div>
+                        <div class="admin-stat-icon" style="background:rgba(234,179,8,0.15); color:#facc15;"><i data-lucide="refresh-cw"></i></div>
                         <div>
                             <h3 id="inTransitCount">0</h3>
                             <p>In Transit</p>
                         </div>
                     </div>
                     <div class="admin-stat-card">
-                        <div class="admin-stat-icon" style="background:rgba(34,197,94,0.15); color:#4ade80;">✅</div>
+                        <div class="admin-stat-icon" style="background:rgba(34,197,94,0.15); color:#4ade80;"><i data-lucide="check-circle"></i></div>
                         <div>
                             <h3 id="deliveredCount">0</h3>
                             <p>Delivered</p>
                         </div>
                     </div>
                     <div class="admin-stat-card">
-                        <div class="admin-stat-icon" style="background:rgba(239,68,68,0.15); color:#f87171;">⏸️</div>
+                        <div class="admin-stat-icon" style="background:rgba(239,68,68,0.15); color:#f87171;"><i data-lucide="pause-circle"></i></div>
                         <div>
                             <h3 id="onHoldCount">0</h3>
                             <p>On Hold</p>
@@ -85,7 +85,7 @@
                 <div class="admin-card" style="margin-top:30px;">
                     <div class="admin-card-header">
                         <h3>Recent Shipments</h3>
-                        <a href="#" class="sidebar-link" data-section="shipments" style="color:var(--accent); font-size:0.88rem;">View All →</a>
+                        <a href="#" class="sidebar-link" data-section="shipments" style="color:var(--accent); font-size:0.88rem; display:inline-flex; align-items:center; gap:4px;">View All <i data-lucide="arrow-right" style="width:14px; height:14px;"></i></a>
                     </div>
                     <div class="admin-table-wrap">
                         <table class="admin-table" id="recentShipmentsTable">
@@ -258,7 +258,7 @@
                         <div id="timelineEvents"></div>
 
                         <div style="display:flex; gap:12px; margin-top:24px;">
-                            <button type="submit" class="btn btn-primary">💾 Save Shipment</button>
+                            <button type="submit" class="btn btn-primary" style="display:flex; align-items:center; gap:8px;"><i data-lucide="save"></i> Save Shipment</button>
                             <button type="button" class="btn btn-outline" id="cancelEdit" style="display:none;">Cancel Edit</button>
                         </div>
                     </form>
@@ -272,8 +272,8 @@
                         <h3>Contact Messages</h3>
                     </div>
                     <div id="messagesList" class="messages-list">
-                        <div style="text-align:center; padding:40px; color:var(--text-muted);">
-                            <div style="font-size:2rem; margin-bottom:12px;">💬</div>
+                        <div style="text-align:center; padding:40px; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:12px;">
+                            <div style="font-size:2rem;"><i data-lucide="message-square" style="width:48px; height:48px;"></i></div>
                             <p>No messages yet. Messages from the contact form will appear here.</p>
                         </div>
                     </div>
@@ -287,7 +287,7 @@
         <div class="admin-modal-content">
             <div class="admin-modal-header">
                 <h3>Update Shipment Status</h3>
-                <button class="admin-modal-close" id="closeModal">&times;</button>
+                <button class="admin-modal-close" id="closeModal"><i data-lucide="x" style="width:20px; height:20px;"></i></button>
             </div>
             <div class="admin-modal-body">
                 <div class="form-group">
@@ -330,6 +330,10 @@
             publicKey: "6B9z0MJv-2mCrZp_M",
           });
       })();
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      lucide.createIcons();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js"></script>

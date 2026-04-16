@@ -48,14 +48,14 @@
                     <p class="section-subtitle">Whether you need a quote, have questions about a shipment, or want to discuss custom logistics solutions — our team is ready to assist.</p>
 
                     <div class="contact-info-card">
-                        <div class="contact-info-icon">📧</div>
+                        <div class="contact-info-icon"><i data-lucide="mail"></i></div>
                         <div>
                             <h4>Email Us</h4>
                             <p>contact@prestigefreightcargo.com</p>
                         </div>
                     </div>
                     <div class="contact-info-card">
-                        <div class="contact-info-icon">📞</div>
+                        <div class="contact-info-icon"><i data-lucide="phone"></i></div>
                         <div>
                             <h4>Call Us</h4>
                             <p>+1 (234) 567-890</p>
@@ -63,7 +63,7 @@
                         </div>
                     </div>
                     <div class="contact-info-card">
-                        <div class="contact-info-icon">📍</div>
+                        <div class="contact-info-icon"><i data-lucide="map-pin"></i></div>
                         <div>
                             <h4>Visit Us</h4>
                             <p>1245 Transport Avenue, Suite 300</p>
@@ -71,7 +71,7 @@
                         </div>
                     </div>
                     <div class="contact-info-card">
-                        <div class="contact-info-icon">🕐</div>
+                        <div class="contact-info-icon"><i data-lucide="clock"></i></div>
                         <div>
                             <h4>Working Hours</h4>
                             <p>Monday – Saturday: 8:00 AM – 8:00 PM</p>
@@ -117,7 +117,7 @@
                                 <label for="contactMessage">Your Message *</label>
                                 <textarea id="contactMessage" placeholder="Tell us how we can help you..." required></textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Send Message →</button>
+                            <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; display:inline-flex; align-items:center; gap:8px;">Send Message <i data-lucide="arrow-right"></i></button>
                         </form>
                     </div>
                 </div>
@@ -129,8 +129,8 @@
     <section style="padding:0 0 60px;">
         <div class="container">
             <div style="background:var(--primary-light); border:1px solid var(--glass-border); border-radius:var(--radius); height:350px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                <div style="text-align:center; color:var(--text-muted);">
-                    <div style="font-size:3rem; margin-bottom:12px;">🗺️</div>
+                <div style="text-align:center; color:var(--text-muted); display:flex; flex-direction:column; align-items:center;">
+                    <div style="font-size:3rem; margin-bottom:12px;"><i data-lucide="map" style="width:48px; height:48px;"></i></div>
                     <h3 style="color:var(--white); margin-bottom:6px;">Our Location</h3>
                     <p>1245 Transport Avenue, Suite 300, New York, NY 10001</p>
                 </div>
@@ -144,16 +144,20 @@
                 <div class="footer-about">
                     <a href="index.html" class="nav-logo"><img src="images/logo.png" alt="Prestige Freight Cargo"><span class="nav-logo-text">Prestige <span>Freight Cargo</span></span></a>
                     <p>Prestige Freight Cargo provides secure, efficient, and timely transport solutions.</p>
-                    <div class="footer-socials"><a href="#">f</a><a href="#">𝕏</a><a href="#">📷</a><a href="#">in</a></div>
+                    <div class="footer-socials"><a href="#"><i data-lucide="facebook"></i></a><a href="#"><i data-lucide="twitter"></i></a><a href="#"><i data-lucide="instagram"></i></a><a href="#"><i data-lucide="linkedin"></i></a></div>
                 </div>
                 <div class="footer-links"><h4>Quick Links</h4><ul><li><a href="index.html">Home</a></li><li><a href="about.html">About Us</a></li><li><a href="services.html">Services</a></li><li><a href="track.html">Track Package</a></li><li><a href="contact.html">Contact</a></li></ul></div>
                 <div class="footer-links"><h4>Services</h4><ul><li><a href="services.html">Air Freight</a></li><li><a href="services.html">Sea Freight</a></li><li><a href="services.html">Land Transport</a></li><li><a href="services.html">Custom Clearance</a></li><li><a href="services.html">Warehousing</a></li></ul></div>
-                <div class="footer-links"><h4>Contact Info</h4><ul><li><a href="mailto:contact@prestigefreightcargo.com">📧 contact@prestigefreightcargo.com</a></li><li><a href="tel:+1234567890">📞 +1 (234) 567-890</a></li><li><a href="#">📍 1245 Transport Ave, Suite 300</a></li></ul></div>
+                <div class="footer-links"><h4>Contact Info</h4><ul><li><a href="mailto:contact@prestigefreightcargo.com"><i data-lucide="mail"></i> contact@prestigefreightcargo.com</a></li><li><a href="tel:+1234567890"><i data-lucide="phone"></i> +1 (234) 567-890</a></li><li><a href="#"><i data-lucide="map-pin"></i> 1245 Transport Ave, Suite 300</a></li></ul></div>
             </div>
             <div class="footer-bottom"><p>&copy; 2026 Prestige Freight Cargo. All Rights Reserved.</p></div>
         </div>
     </footer>
     <div class="toast" id="toast"></div>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      lucide.createIcons();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js"></script>
     <script src="js/main.js"></script>

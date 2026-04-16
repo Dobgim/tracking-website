@@ -131,7 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td data-label="Status"><span class="status-badge ${s.status}">${formatStatus(s.status)}</span></td>
                 <td data-label="Date">${s.ship_date ? new Date(s.ship_date).toLocaleDateString() : 'N/A'}</td>
             </tr>
-        `).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:40px;"><div style="font-size:2.5rem; margin-bottom:12px;">📦</div>No shipments yet. Create your first shipment to get started!</td></tr>';
+        `).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:40px;"><div style="font-size:2.5rem; margin-bottom:12px; display:flex; justify-content:center;"><i data-lucide="package" style="width:48px; height:48px;"></i></div>No shipments yet. Create your first shipment to get started!</td></tr>';
+        if (window.lucide) lucide.createIcons();
     }
 
     // === SHIPMENTS LIST ===
@@ -163,13 +164,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td data-label="Status"><span class="status-badge ${s.status}">${formatStatus(s.status)}</span></td>
                 <td data-label="Actions">
                     <div class="action-btns-group">
-                        <button class="action-btn" title="Update Status" onclick="openStatusModal('${s.tracking_id}')">📝</button>
-                        <button class="action-btn" title="Edit" onclick="editShipment('${s.tracking_id}')">✏️</button>
-                        <button class="action-btn delete" title="Delete" onclick="deleteShipment('${s.tracking_id}')">🗑️</button>
+                        <button class="action-btn" title="Update Status" onclick="openStatusModal('${s.tracking_id}')"><i data-lucide="clipboard-list"></i></button>
+                        <button class="action-btn" title="Edit" onclick="editShipment('${s.tracking_id}')"><i data-lucide="edit"></i></button>
+                        <button class="action-btn delete" title="Delete" onclick="deleteShipment('${s.tracking_id}')"><i data-lucide="trash-2"></i></button>
                     </div>
                 </td>
             </tr>
-        `).join('') || '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:40px;"><div style="font-size:2.5rem; margin-bottom:12px;">📦</div>No shipments found. Create your first one!</td></tr>';
+        `).join('') || '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:40px;"><div style="font-size:2.5rem; margin-bottom:12px; display:flex; justify-content:center;"><i data-lucide="package" style="width:48px; height:48px;"></i></div>No shipments found. Create your first one!</td></tr>';
+        if (window.lucide) lucide.createIcons();
     }
 
     // Filter & search listeners
@@ -276,6 +278,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             showToast('Shipment created! Tracking ID: ' + shipmentData.tracking_id);
+
+            // --- Send Shipment Creation Email to Sender ---
+            if (shipmentData.sender_email) {
+                const senderParams = {
+                    to_name: shipmentData.sender || 'Customer',
+                    to_email: shipmentData.sender_email,
+                    tracking_number: shipmentData.tracking_id,
+                    shipment_type: shipmentData.type || 'N/A',
+                    origin: shipmentData.origin || 'N/A',
+                    destination: shipmentData.destination || 'N/A',
+                    receiver_name: shipmentData.receiver || 'N/A',
+                    ship_date: shipmentData.ship_date || 'N/A',
+                    status: formatStatus(shipmentData.status)
+                };
+
+                emailjs.send('service_vlwtmqa', 'template_shipment_created', senderParams)
+                    .then(() => {
+                        console.log('Shipment creation email sent to sender:', shipmentData.sender_email);
+                        showToast('✓ Confirmation email sent to sender!');
+                    })
+                    .catch((err) => {
+                        console.error('Failed to send sender email:', err);
+                    });
+            }
+            // --- End Sender Email ---
         }
 
         shipmentForm.reset();
@@ -483,11 +510,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (error || !messages || messages.length === 0) {
             container.innerHTML = `
-                <div style="text-align:center; padding:40px; color:var(--text-muted);">
-                    <div style="font-size:2.5rem; margin-bottom:12px;">💬</div>
+                <div style="text-align:center; padding:40px; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:12px;">
+                    <div style="font-size:2.5rem;"><i data-lucide="message-square" style="width:48px; height:48px;"></i></div>
                     <p>No messages yet. Messages from the contact form will appear here.</p>
                 </div>
             `;
+            if (window.lucide) lucide.createIcons();
             return;
         }
 
@@ -499,11 +527,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <p>${m.message}</p>
                 <div class="message-meta" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <span>📧 ${m.email} ${m.phone ? '· 📞 ' + m.phone : ''} · Subject: ${m.subject || 'N/A'}</span>
-                    <button class="action-btn delete" onclick="deleteMessage(${m.id})" title="Delete">🗑️</button>
+                    <span style="display:flex; align-items:center; gap:12px;">
+                        <span style="display:flex; align-items:center; gap:4px;"><i data-lucide="mail" style="width:14px; height:14px;"></i> ${m.email}</span>
+                        ${m.phone ? `<span style="display:flex; align-items:center; gap:4px;"><i data-lucide="phone" style="width:14px; height:14px;"></i> ${m.phone}</span>` : ''}
+                        <span>· Subject: ${m.subject || 'N/A'}</span>
+                    </span>
+                    <button class="action-btn delete" onclick="deleteMessage(${m.id})" title="Delete"><i data-lucide="trash-2"></i></button>
                 </div>
             </div>
         `).join('');
+        if (window.lucide) lucide.createIcons();
     }
 
     window.deleteMessage = async function(id) {

@@ -1,22 +1,18 @@
 /* ===== TRACK.JS - Professional Package Tracking with Supabase ===== */
+/* v5 — Synchronized map progress (all viewers see same position)    */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const trackForm = document.getElementById('trackForm');
-    const trackResult = document.getElementById('trackResult');
+    const trackForm     = document.getElementById('trackForm');
+    const trackResult   = document.getElementById('trackResult');
     const trackNoResult = document.getElementById('trackNoResult');
 
     if (!trackForm) return;
 
     // === VEHICLE ICON MAP ===
-    // Using reliable hosted PNG icons — no CDN issues, no emoji rendering problems
     const ICONS = {
-        // Air freight → airplane icon (blue/white plane)
         air:  'https://maps.gstatic.com/mapfiles/ms2/micons/plane.png',
-        // Sea freight → blue boat icon
         sea:  'https://maps.gstatic.com/mapfiles/ms2/micons/ferry.png',
-        // Land/road → truck icon
         land: 'https://maps.gstatic.com/mapfiles/ms2/micons/truck.png',
-        // Default → package/box icon
         box:  'https://maps.gstatic.com/mapfiles/ms2/micons/package.png'
     };
 
@@ -31,17 +27,59 @@ document.addEventListener('DOMContentLoaded', () => {
         return ICONS.box;
     }
 
-    // === LIVE MAP STATE (shared across realtime updates) ===
+    // === LIVE MAP STATE ===
     let mapState = {
-        marker:     null,
-        pathCoords: [],
-        index:      0,
-        interval:   null,
-        trackId:    null
+        marker:       null,
+        pathCoords:   [],
+        index:        0,
+        interval:     null,
+        trackId:      null,
+        savePending:  false,
+        saveTimer:    null
     };
 
     let currentSubscription = null;
     let mapInitializedId    = null;
+    let currentShipmentData = null;
+
+    // =========================================================
+    // === SYNCHRONIZED PROGRESS: read / write via Supabase ===
+    // =========================================================
+    // The map_progress column stores the current step index (integer).
+    // If the column does not exist yet in your DB, run this SQL once:
+    //   ALTER TABLE shipments ADD COLUMN IF NOT EXISTS map_progress INTEGER DEFAULT 0;
+
+    async function readProgressFromDB(trackingId) {
+        try {
+            const { data, error } = await supabase
+                .from('shipments')
+                .select('map_progress')
+                .eq('tracking_id', trackingId)
+                .single();
+            if (error || data == null || data.map_progress == null) return null;
+            return parseInt(data.map_progress, 10);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function writeProgressToDB(trackingId, index) {
+        try {
+            await supabase
+                .from('shipments')
+                .update({ map_progress: index })
+                .eq('tracking_id', trackingId);
+        } catch (e) { /* silently ignore if column doesn't exist */ }
+    }
+
+    // Debounced DB write — fires 4 seconds after the last call
+    // so we don't hammer the database every second
+    function scheduleSave(trackingId, index) {
+        if (mapState.saveTimer) clearTimeout(mapState.saveTimer);
+        mapState.saveTimer = setTimeout(() => {
+            writeProgressToDB(trackingId, index);
+        }, 4000);
+    }
 
     // === SUPABASE REALTIME: listen for admin status changes ===
     function subscribeToShipment(trackingId) {
@@ -52,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'shipments', filter: `tracking_id=eq.${trackingId}` },
                 payload => {
-                    // Status changed in admin — update everything live without page reload
+                    currentShipmentData = payload.new;
                     displayResult(payload.new, true);
                 }
             )
@@ -61,31 +99,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === STATUS CONFIG ===
     const STATUS_CONFIG = {
-        'pending':          { icon: '⏳', label: 'Pending',          desc: 'Your shipment has been created and is awaiting pickup.',         step: 0 },
-        'picked-up':        { icon: '📤', label: 'Picked Up',        desc: 'Package has been picked up from the sender.',                   step: 1 },
-        'in-transit':       { icon: '✈️', label: 'In Transit',       desc: 'Your shipment is on its way to the destination.',               step: 2 },
-        'out-for-delivery': { icon: '🚚', label: 'Out for Delivery', desc: 'Package is out for delivery to the receiver.',                  step: 3 },
-        'delivered':        { icon: '✅', label: 'Delivered',        desc: 'Package has been delivered successfully.',                       step: 4 },
-        'on-hold':          { icon: '⏸️', label: 'On Hold',          desc: 'Shipment is on hold. Contact support for details.',             step: -1 },
-        'returned':         { icon: '↩️', label: 'Returned',         desc: 'Package has been returned to the sender.',                      step: -1 },
-        'cancelled':        { icon: '❌', label: 'Cancelled',        desc: 'This shipment has been cancelled.',                             step: -1 }
+        'pending':          { icon: 'clock',         label: 'Pending',          desc: 'Your shipment has been created and is awaiting pickup.',         step: 0 },
+        'picked-up':        { icon: 'package-plus',  label: 'Picked Up',        desc: 'Package has been picked up from the sender.',                   step: 1 },
+        'in-transit':       { icon: 'plane',         label: 'In Transit',       desc: 'Your shipment is on its way to the destination.',               step: 2 },
+        'out-for-delivery': { icon: 'truck',         label: 'Out for Delivery', desc: 'Package is out for delivery to the receiver.',                  step: 3 },
+        'delivered':        { icon: 'check-circle',  label: 'Delivered',        desc: 'Package has been delivered successfully.',                       step: 4 },
+        'on-hold':          { icon: 'pause-circle',  label: 'On Hold',          desc: 'Shipment is on hold. Contact support for details.',             step: -1 },
+        'returned':         { icon: 'undo',          label: 'Returned',         desc: 'Package has been returned to the sender.',                      step: -1 },
+        'cancelled':        { icon: 'x-circle',      label: 'Cancelled',        desc: 'This shipment has been cancelled.',                             step: -1 }
     };
 
     const PROGRESS_STEPS = [
-        { icon: '📦', label: 'Created' },
-        { icon: '📤', label: 'Picked Up' },
-        { icon: '✈️', label: 'In Transit' },
-        { icon: '🚚', label: 'Out for Delivery' },
-        { icon: '✅', label: 'Delivered' }
+        { icon: 'box',          label: 'Created' },
+        { icon: 'package-plus', label: 'Picked Up' },
+        { icon: 'plane',        label: 'In Transit' },
+        { icon: 'truck',        label: 'Out for Delivery' },
+        { icon: 'check-circle', label: 'Delivered' }
     ];
 
-    // === FORM SUBMIT: Track a package ===
+    // === FORM SUBMIT ===
     trackForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         const trackingId = document.getElementById('trackingInput').value.trim().toUpperCase();
 
-        trackResult.style.display    = 'none';
-        trackNoResult.style.display  = 'none';
+        trackResult.style.display   = 'none';
+        trackNoResult.style.display = 'none';
 
         const { data, error } = await supabase
             .from('shipments')
@@ -96,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (error || !data) {
             trackNoResult.style.display = 'block';
         } else {
+            currentShipmentData = data;
             if (mapInitializedId !== trackingId) {
                 mapInitializedId = trackingId;
                 displayResult(data, false);
@@ -115,21 +154,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const banner = document.getElementById('statusBanner');
         banner.className = 'status-banner ' + s.status;
-        document.getElementById('statusIcon').textContent  = config.icon;
+        document.getElementById('statusIcon').innerHTML   = `<i data-lucide="${config.icon}"></i>`;
         document.getElementById('statusLabel').textContent = config.label;
         document.getElementById('statusDesc').textContent  = config.desc;
 
         renderProgress(config.step);
 
-        document.getElementById('invSender').textContent       = s.sender         || '—';
-        document.getElementById('invSenderEmail').textContent  = s.sender_email   || '—';
-        document.getElementById('invSenderNumber').textContent = s.sender_number  || '—';
-        document.getElementById('invOrigin').textContent       = s.origin         || '—';
-        
-        document.getElementById('invReceiver').textContent     = s.receiver       || '—';
-        document.getElementById('invReceiverEmail').textContent= s.receiver_email || '—';
+        document.getElementById('invSender').textContent        = s.sender         || '—';
+        document.getElementById('invSenderEmail').textContent   = s.sender_email   || '—';
+        document.getElementById('invSenderNumber').textContent  = s.sender_number  || '—';
+        document.getElementById('invOrigin').textContent        = s.origin         || '—';
+
+        document.getElementById('invReceiver').textContent      = s.receiver       || '—';
+        document.getElementById('invReceiverEmail').textContent = s.receiver_email || '—';
         document.getElementById('invReceiverNumber').textContent= s.receiver_number|| '—';
-        document.getElementById('invDestination').textContent  = s.destination    || '—';
+        document.getElementById('invDestination').textContent   = s.destination    || '—';
 
         document.getElementById('packageTableBody').innerHTML = `
             <tr>
@@ -145,16 +184,17 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTimeline(s.timeline);
 
         if (!isUpdate) {
-            // First load — render the map fresh
+            // First load — render the map fresh (with DB-synced position)
             mapState.trackId = s.tracking_id;
             renderMap(s);
             trackResult.style.display = 'block';
             setTimeout(() => trackResult.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
         } else {
-            // Live admin update — pause or resume exactly where vehicle is
+            // Live admin update — pause or resume based on new status
             updateMapAnimation(s.status);
-            // Also update the status banner text live
         }
+
+        if (window.lucide) lucide.createIcons();
     }
 
     // === PROGRESS BAR ===
@@ -167,11 +207,12 @@ document.addEventListener('DOMContentLoaded', () => {
         PROGRESS_STEPS.forEach((ps, i) => {
             let cls = i < step ? 'done' : i === step ? 'current' : '';
             html += `<div class="progress-step ${cls}">
-                        <div class="step-dot">${i < step ? '✓' : ps.icon}</div>
+                        <div class="step-dot">${i < step ? '<i data-lucide="check"></i>' : `<i data-lucide="${ps.icon}"></i>`}</div>
                         <div class="step-label">${ps.label}</div>
                      </div>`;
         });
         container.innerHTML = html;
+        if (window.lucide) lucide.createIcons();
     }
 
     // === TIMELINE ===
@@ -189,14 +230,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="tl-info">
                     <div class="tl-event">${item.event || ''}</div>
-                    <div class="tl-loc">${item.location ? '📍 ' + item.location : ''}</div>
+                    <div class="tl-loc">${item.location ? '<i data-lucide="map-pin" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:4px;"></i>' + item.location : ''}</div>
                 </div>
             </div>
         `).join('');
+        if (window.lucide) lucide.createIcons();
     }
 
-    // === RENDER MAP (called once per shipment) ===
-    function renderMap(s) {
+    // === RENDER MAP (called once per shipment load) ===
+    async function renderMap(s) {
         const origin      = s.origin;
         const destination = s.destination;
         const status      = s.status;
@@ -211,13 +253,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         mapContainer.style.display = 'block';
-        routeInfo.textContent = `${origin}  →  ${destination}`;
+        routeInfo.innerHTML = `${origin} <i data-lucide="arrow-right" style="width:14px; height:14px; vertical-align:middle; margin:0 8px;"></i> ${destination}`;
+        if (window.lucide) lucide.createIcons();
 
-        // Clear any previous interval
+        // Stop any previous animation
         if (mapState.interval) {
             window.clearInterval(mapState.interval);
             mapState.interval = null;
         }
+
+        // ─── Read saved progress from DB (synchronized for all viewers) ───
+        const savedIndex = await readProgressFromDB(s.tracking_id);
 
         const geocoder = new google.maps.Geocoder();
         const map = new google.maps.Map(mapDiv, {
@@ -253,8 +299,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     icon: { url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new google.maps.Size(36, 36) }
                 });
 
-                // Build the curved flight path
-                const pathCoords = buildCurvedPath(originCoords, destCoords, 600);
+                // Build curved flight path with more points for smoother animation
+                const pathCoords = buildCurvedPath(originCoords, destCoords, 1200);
 
                 // Dashed background line
                 new google.maps.Polyline({
@@ -276,10 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     map
                 });
 
-                // ─── VEHICLE MARKER ─────────────────────────────────────────
-                // Use Google Maps built-in icons — always loads, never fails
+                // Vehicle marker
                 const vehicleIconUrl = getIconForType(s.type);
-
                 const vehicleMarker = new google.maps.Marker({
                     position: originCoords,
                     map,
@@ -297,37 +341,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 mapState.pathCoords = pathCoords;
                 mapState.trackId    = s.tracking_id;
 
-                // Restore saved position from localStorage (so refresh keeps the position)
-                const saved = localStorage.getItem('PF_IDX_' + s.tracking_id);
-                if (saved !== null) {
-                    mapState.index = Math.min(parseInt(saved, 10), pathCoords.length - 1);
+                // === RESTORE POSITION (from DB — same for ALL viewers) ===
+                if (savedIndex !== null && savedIndex > 0) {
+                    // Resume from saved DB position — same position everyone sees
+                    mapState.index = Math.min(savedIndex, pathCoords.length - 1);
                 } else {
-                    // First time: position marker based on current status
-                    let pct = 0;
-                    if      (status === 'pending')          pct = 0;
-                    else if (status === 'picked-up')        pct = 5;
-                    else if (status === 'in-transit')       pct = 10;
-                    else if (status === 'out-for-delivery') pct = 78;
-                    else if (status === 'delivered')        pct = 100;
-                    else                                    pct = 40;
-                    mapState.index = Math.floor((pct / 100) * (pathCoords.length - 1));
+                    // First time shipment is ever tracked — set starting position by status
+                    let startPct = 0;
+                    if      (status === 'pending')          startPct = 0;
+                    else if (status === 'picked-up')        startPct = 2;
+                    else if (status === 'in-transit')       startPct = 10;
+                    else if (status === 'out-for-delivery') startPct = 80;
+                    else if (status === 'delivered')        startPct = 100;
+                    else                                    startPct = 5;
+                    mapState.index = Math.floor((startPct / 100) * (pathCoords.length - 1));
+                    // Save this initial position to DB immediately
+                    writeProgressToDB(s.tracking_id, mapState.index);
                 }
                 vehicleMarker.setPosition(pathCoords[mapState.index]);
 
-                // Fit map to show both pins
+                // Fit map bounds
                 const bounds = new google.maps.LatLngBounds();
                 bounds.extend(originCoords);
                 bounds.extend(destCoords);
                 map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
 
-                // Start animation engine based on current status
+                // Start animation based on current status
                 updateMapAnimation(status);
             });
         });
     }
 
+    // ================================================================
     // === ANIMATION ENGINE ===
-    // Called on first load AND on every live realtime status update from admin
+    // Called on first load AND on every live realtime status update
+    // ================================================================
     function updateMapAnimation(newStatus) {
         if (!mapState.marker || !mapState.pathCoords.length) return;
 
@@ -336,49 +384,70 @@ document.addEventListener('DOMContentLoaded', () => {
             window.clearInterval(mapState.interval);
             mapState.interval = null;
         }
+        if (mapState.saveTimer) {
+            clearTimeout(mapState.saveTimer);
+            mapState.saveTimer = null;
+        }
 
-        // Save current position immediately (so page reload restores it)
-        localStorage.setItem('PF_IDX_' + mapState.trackId, mapState.index);
+        // Save current position to DB immediately when status changes
+        writeProgressToDB(mapState.trackId, mapState.index);
 
-        // Decide what to do based on the NEW status
-        const movingStatuses = ['in-transit', 'out-for-delivery', 'picked-up'];
-        const isMoving = movingStatuses.includes(newStatus);
-
+        // ── DELIVERED: snap to final destination ──
         if (newStatus === 'delivered') {
-            // Jump to destination
             mapState.index = mapState.pathCoords.length - 1;
             mapState.marker.setPosition(mapState.pathCoords[mapState.index]);
-            localStorage.setItem('PF_IDX_' + mapState.trackId, mapState.index);
+            writeProgressToDB(mapState.trackId, mapState.index);
             return;
         }
 
-        if (!isMoving) {
-            // PAUSE — vehicle stays frozen exactly where it is
-            // (interval is already cleared above, nothing more to do)
+        // ── STATIONARY statuses: freeze vehicle exactly where it is ──
+        const movingStatuses = ['in-transit', 'out-for-delivery', 'picked-up'];
+        if (!movingStatuses.includes(newStatus)) {
+            // PAUSED — do nothing, vehicle stays frozen
             return;
         }
 
-        // MOVING — slowly crawl forward toward the target zone
-        let targetPct = 80;
-        if (newStatus === 'picked-up')        targetPct = 8;
-        if (newStatus === 'in-transit')       targetPct = 80;
-        if (newStatus === 'out-for-delivery') targetPct = 97;
+        // ── MOVING: crawl forward toward the target zone ──
+        // Target percentage of the path (NEVER reaches 100% until delivered)
+        let targetPct;
+        if      (newStatus === 'picked-up')        targetPct = 5;   // only slightly past origin
+        else if (newStatus === 'in-transit')       targetPct = 78;  // mid-route
+        else if (newStatus === 'out-for-delivery') targetPct = 96;  // close but not at destination
+        else                                        targetPct = 78;
 
         const maxIndex = Math.floor((targetPct / 100) * (mapState.pathCoords.length - 1));
 
-        if (mapState.index >= maxIndex) return; // already at or past target, don't move
+        if (mapState.index >= maxIndex) {
+            // Already at or beyond the ceiling for this status — hold position
+            return;
+        }
 
-        // Move 1 step every 1000ms = very slow, fully controllable
+        // ── Speed settings ──
+        // Step interval in milliseconds — higher = slower movement
+        // 1200 path points total:
+        //   picked-up    → 60 steps   @  8000ms/step = about 8 mins per visible move (very slow)
+        //   in-transit   → ~936 steps @ 12000ms/step = very slow crawl
+        //   out-delivery → ~192 steps @  5000ms/step = slightly faster near end
+        let msPerStep;
+        if      (newStatus === 'picked-up')        msPerStep = 8000;   // very slow
+        else if (newStatus === 'in-transit')       msPerStep = 12000;  // slowest — long haul
+        else if (newStatus === 'out-for-delivery') msPerStep = 5000;   // last mile, bit faster
+        else                                        msPerStep = 12000;
+
         mapState.interval = window.setInterval(() => {
             if (mapState.index < maxIndex) {
                 mapState.index++;
                 mapState.marker.setPosition(mapState.pathCoords[mapState.index]);
-                localStorage.setItem('PF_IDX_' + mapState.trackId, mapState.index);
+                // Sync to DB every step (debounced — actual write fires 4s after last call)
+                scheduleSave(mapState.trackId, mapState.index);
             } else {
+                // Reached ceiling for this status — stop
                 window.clearInterval(mapState.interval);
                 mapState.interval = null;
+                // Final save for this stop
+                writeProgressToDB(mapState.trackId, mapState.index);
             }
-        }, 1000); // 1 second per step = very slow and controllable
+        }, msPerStep);
     }
 
     // === CURVED PATH GENERATOR ===

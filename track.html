@@ -358,7 +358,7 @@
     <section class="track-section">
         <div class="container">
             <div class="track-form-container reveal">
-                <h2>📦 Shipment Tracker</h2>
+                <h2 style="display:flex; align-items:center; gap:10px;"><i data-lucide="package"></i> Shipment Tracker</h2>
                 <p>Enter your tracking ID to see detailed shipment information, live status updates, and route map.</p>
                 <form id="trackForm">
                     <div class="track-input-group">
@@ -399,14 +399,14 @@
                         <!-- Invoice Details -->
                         <div class="invoice-grid">
                             <div class="invoice-block">
-                                <h4>📤 Sender Information</h4>
+                                <h4 style="display:flex; align-items:center; gap:8px;"><i data-lucide="upload" style="width:14px; height:14px;"></i> Sender Information</h4>
                                 <div class="detail-row"><label>Name</label><span id="invSender">—</span></div>
                                 <div class="detail-row"><label>Email</label><span id="invSenderEmail">—</span></div>
                                 <div class="detail-row"><label>Phone</label><span id="invSenderNumber">—</span></div>
                                 <div class="detail-row"><label>Origin</label><span id="invOrigin">—</span></div>
                             </div>
                             <div class="invoice-block">
-                                <h4>📥 Receiver Information</h4>
+                                <h4 style="display:flex; align-items:center; gap:8px;"><i data-lucide="download" style="width:14px; height:14px;"></i> Receiver Information</h4>
                                 <div class="detail-row"><label>Name</label><span id="invReceiver">—</span></div>
                                 <div class="detail-row"><label>Email</label><span id="invReceiverEmail">—</span></div>
                                 <div class="detail-row"><label>Phone</label><span id="invReceiverNumber">—</span></div>
@@ -431,7 +431,7 @@
 
                         <!-- Timeline -->
                         <div class="invoice-timeline">
-                            <h4>📍 Shipment Timeline</h4>
+                            <h4 style="display:flex; align-items:center; gap:8px;"><i data-lucide="map-pin" style="width:14px; height:14px;"></i> Shipment Timeline</h4>
                             <div id="invTimeline"></div>
                         </div>
                     </div>
@@ -440,14 +440,14 @@
                         <div>
                             <span class="powered">Prestige Freight Cargo</span> · Premium Logistics & Freight Solutions
                         </div>
-                        <button class="print-btn" onclick="window.print()">🖨️ Print Invoice</button>
+                        <button class="print-btn" onclick="window.print()" style="display:flex; align-items:center; gap:8px;"><i data-lucide="printer"></i> Print Invoice</button>
                     </div>
                 </div>
 
                 <!-- Google Maps Route -->
                 <div class="map-container" id="mapContainer">
                     <div class="map-header">
-                        <h3>🗺️ Live <span>Route Map</span></h3>
+                        <h3 style="display:flex; align-items:center; gap:8px;"><i data-lucide="map"></i> Live <span>Route Map</span></h3>
                         <div class="route-info" id="routeInfo"></div>
                     </div>
                     <div class="map-iframe-wrap">
@@ -459,7 +459,7 @@
             <!-- No Result -->
             <div id="trackNoResult" style="display:none;">
                 <div class="track-form-container" style="text-align:center; padding:50px 30px; margin-top:30px;">
-                    <div style="font-size:3.5rem; margin-bottom:16px;">🔍</div>
+                    <div style="font-size:3.5rem; margin-bottom:16px; display:flex; justify-content:center;"><i data-lucide="search" style="width:64px; height:64px;"></i></div>
                     <h3 style="margin-bottom:10px; font-size:1.3rem;">No Shipment Found</h3>
                     <p style="color:var(--text-muted); max-width:400px; margin:0 auto;">Please double-check your tracking number and try again. If the issue persists, <a href="contact.html" style="color:var(--accent);">contact our support team</a>.</p>
                 </div>
@@ -473,7 +473,7 @@
             <div class="cta-box reveal">
                 <h2>Need Help With Your Shipment?</h2>
                 <p>Our support team is available 24/7 to assist you with any questions about your delivery.</p>
-                <a href="contact.html" class="btn btn-white" style="position:relative;">Contact Support →</a>
+                <a href="contact.html" class="btn btn-white" style="position:relative; display:inline-flex; align-items:center; gap:8px;">Contact Support <i data-lucide="arrow-right"></i></a>
             </div>
         </div>
     </section>
@@ -484,21 +484,30 @@
                 <div class="footer-about">
                     <a href="index.html" class="nav-logo"><img src="images/logo.png" alt="Prestige Freight Cargo"><span class="nav-logo-text">Prestige <span>Freight Cargo</span></span></a>
                     <p>Prestige Freight Cargo provides secure, efficient, and timely transport solutions.</p>
-                    <div class="footer-socials"><a href="#">f</a><a href="#">𝕏</a><a href="#">📷</a><a href="#">in</a></div>
+                    <div class="footer-socials">
+                        <a href="#" aria-label="Facebook"><i data-lucide="facebook"></i></a>
+                        <a href="#" aria-label="Twitter"><i data-lucide="twitter"></i></a>
+                        <a href="#" aria-label="Instagram"><i data-lucide="instagram"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i data-lucide="linkedin"></i></a>
+                    </div>
                 </div>
                 <div class="footer-links"><h4>Quick Links</h4><ul><li><a href="index.html">Home</a></li><li><a href="about.html">About Us</a></li><li><a href="services.html">Services</a></li><li><a href="track.html">Track Package</a></li><li><a href="contact.html">Contact</a></li></ul></div>
                 <div class="footer-links"><h4>Services</h4><ul><li><a href="services.html">Air Freight</a></li><li><a href="services.html">Sea Freight</a></li><li><a href="services.html">Land Transport</a></li><li><a href="services.html">Custom Clearance</a></li><li><a href="services.html">Warehousing</a></li></ul></div>
-                <div class="footer-links"><h4>Contact Info</h4><ul><li><a href="mailto:contact@prestigefreightcargo.com">📧 contact@prestigefreightcargo.com</a></li><li><a href="tel:+1234567890">📞 +1 (234) 567-890</a></li><li><a href="#">📍 1245 Transport Ave, Suite 300</a></li></ul></div>
+                <div class="footer-links"><h4>Contact Info</h4><ul><li><a href="mailto:contact@prestigefreightcargo.com"><i data-lucide="mail"></i> contact@prestigefreightcargo.com</a></li><li><a href="tel:+1234567890"><i data-lucide="phone"></i> +1 (234) 567-890</a></li><li><a href="#"><i data-lucide="map-pin"></i> 1245 Transport Ave, Suite 300</a></li></ul></div>
             </div>
             <div class="footer-bottom"><p>&copy; 2026 Prestige Freight Cargo. All Rights Reserved.</p></div>
         </div>
     </footer>
     <div class="toast" id="toast"></div>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      lucide.createIcons();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js?v=3"></script>
     <script src="js/main.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBpxYpVUtQlXjQgBCJNDvLkADlgTQ9IbLs&libraries=places"></script>
-    <script src="js/track.js?v=3"></script>
+    <script src="js/track.js?v=5"></script>
     <!-- Start of LiveChat (www.livechat.com) code -->
     <script>
         window.__lc = window.__lc || {};
