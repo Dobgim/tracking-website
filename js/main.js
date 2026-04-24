@@ -1,10 +1,10 @@
 /* ===== MAIN.JS - Navigation, Animations, General ===== */
 
 // Preloader
-window.addEventListener('load', () => {
+document.addEventListener('DOMContentLoaded', () => {
     const preloader = document.getElementById('preloader');
     if (preloader) {
-        setTimeout(() => preloader.classList.add('hidden'), 600);
+        preloader.classList.add('hidden');
     }
 });
 
