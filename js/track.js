@@ -197,7 +197,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('waypointRouteDisplay');
         if (!container) return;
 
-        if (!waypoints.length) {
+        const visibleWaypoints = waypoints.filter(w => !w.pause);
+
+        if (!visibleWaypoints.length) {
             container.style.display = 'none';
             return;
         }
@@ -205,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.style.display = 'block';
         const stops = [
             { label: s.origin, type: 'origin' },
-            ...waypoints.map(w => ({ label: w.location, type: w.pause ? 'pause' : 'stop' })),
+            ...visibleWaypoints.map(w => ({ label: w.location, type: 'stop' })),
             { label: s.destination, type: 'destination' }
         ];
 
@@ -358,18 +360,20 @@ document.addEventListener('DOMContentLoaded', () => {
             icon: { url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new google.maps.Size(36, 36) }
         });
 
-        // --- Waypoint markers (orange = pause, yellow = pass-through) ---
+        // --- Waypoint markers (yellow = pass-through, pauses are hidden) ---
         for (let i = 1; i < allCoords.length - 1; i++) {
             if (!allCoords[i]) continue;
             const wp      = validWaypoints[i - 1];
             const isPause = wp && wp.pause;
+            
+            // Skip drawing the marker so the pause location remains secret
+            if (isPause) continue; 
+
             new google.maps.Marker({
                 position: allCoords[i], map,
-                title: (isPause ? '⏸ Paused at: ' : '📍 Stop: ') + allLocations[i],
+                title: '📍 Stop: ' + allLocations[i],
                 icon: {
-                    url: isPause
-                        ? 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png'
-                        : 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+                    url: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
                     scaledSize: new google.maps.Size(32, 32)
                 }
             });
@@ -448,8 +452,10 @@ document.addEventListener('DOMContentLoaded', () => {
         validCoords.forEach(c => bounds.extend(c));
         map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
 
-        // --- Update route header ---
-        const stopLabels = [origin, ...validWaypoints.map(w => `${w.pause ? '⏸ ' : ''}${w.location}`), destination];
+        // --- Update route header (hide paused waypoints) ---
+        const visibleHeaderWaypoints = validWaypoints.filter(w => !w.pause);
+        const stopLabels = [origin, ...visibleHeaderWaypoints.map(w => w.location), destination];
+        
         routeInfo.innerHTML = stopLabels.map((l, i) =>
             i < stopLabels.length - 1
                 ? `${l} <i data-lucide="arrow-right" style="width:12px;height:12px;vertical-align:middle;margin:0 4px;"></i>`

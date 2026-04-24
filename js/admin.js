@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     tracking_number: shipmentData.tracking_id,
                     to_name:   shipmentData.receiver || oldData?.receiver || 'Customer',
                     to_email:  rcvEmail,
-                    new_status: `Your shipment is temporarily on hold and is currently awaiting clearance. You will be notified once it resumes transit.`
+                    new_status: `Your shipment is temporarily on hold at ${newPauseWp.location} and is currently awaiting clearance. You will be notified once it resumes transit.`
                 })
                 .then(() => showToast('📧 Pause notification sent to receiver!'))
                 .catch(err => console.error('Pause email error:', err));
