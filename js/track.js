@@ -493,13 +493,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Vehicle hasn't reached the pause yet — animate toward it
+            // in EXACTLY 3 minutes regardless of how many steps remain
             const movingStatuses = ['in-transit', 'out-for-delivery', 'picked-up'];
             if (!movingStatuses.includes(newStatus)) return;
 
-            const maxIndex = pauseIdx;
+            const maxIndex    = pauseIdx;
             if (mapState.index >= maxIndex) return;
 
-            const msPerStep = newStatus === 'picked-up' ? 8000 : newStatus === 'out-for-delivery' ? 5000 : 12000;
+            const stepsToGo = maxIndex - mapState.index;
+            // 3 minutes = 180,000ms divided by steps remaining (min 80ms so it's visibly fast)
+            const msPerStep = Math.max(80, Math.floor(180000 / stepsToGo));
 
             mapState.interval = setInterval(() => {
                 if (mapState.index < maxIndex) {

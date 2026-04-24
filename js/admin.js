@@ -298,7 +298,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (editingId) {
-            // Update existing in Supabase
+            // Fetch OLD waypoints BEFORE update (detect if pause is new or removed)
+            const { data: oldData } = await supabase
+                .from('shipments')
+                .select('waypoints, receiver_email, receiver')
+                .eq('tracking_id', editingId)
+                .single();
+
+            const oldPauseWp  = (oldData?.waypoints || []).find(w => w.pause && w.location);
+            const newPauseWp  = shipmentData.waypoints.find(w => w.pause && w.location);
+            const pauseIsNew  = newPauseWp && (!oldPauseWp || oldPauseWp.location !== newPauseWp.location);
+            const pauseRemoved = !newPauseWp && !!oldPauseWp;
+
+            // Reset map_progress to 0 when a NEW pause is added so
+            // the vehicle fast-forwards from scratch to the pause point in 3 mins
+            if (pauseIsNew) shipmentData.map_progress = 0;
+
+            // Update in Supabase
             const { error } = await supabase
                 .from('shipments')
                 .update(shipmentData)
@@ -309,6 +325,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             showToast('Shipment updated successfully!');
+
+            // ── Pause email: tell receiver shipment is on hold ──
+            const rcvEmail = shipmentData.receiver_email || oldData?.receiver_email;
+            if (pauseIsNew && rcvEmail) {
+                emailjs.send('service_vlwtmqa', 'template_g1eys3j', {
+                    tracking_number: shipmentData.tracking_id,
+                    to_name:   shipmentData.receiver || oldData?.receiver || 'Customer',
+                    to_email:  rcvEmail,
+                    new_status: `Your shipment is temporarily on hold and is currently awaiting clearance. You will be notified once it resumes transit.`
+                })
+                .then(() => showToast('📧 Pause notification sent to receiver!'))
+                .catch(err => console.error('Pause email error:', err));
+            }
+
+            // ── Resume email: tell receiver shipment is moving again ──
+            if (pauseRemoved && rcvEmail) {
+                emailjs.send('service_vlwtmqa', 'template_g1eys3j', {
+                    tracking_number: shipmentData.tracking_id,
+                    to_name:   shipmentData.receiver || oldData?.receiver || 'Customer',
+                    to_email:  rcvEmail,
+                    new_status: `Great news! Your shipment has resumed transit and is now on its way to you.`
+                })
+                .then(() => showToast('📧 Resume notification sent to receiver!'))
+                .catch(err => console.error('Resume email error:', err));
+            }
+
             editingId = null;
             cancelEditBtn.style.display = 'none';
             document.getElementById('formTitle').textContent = 'Add New Shipment';
