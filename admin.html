@@ -7,6 +7,87 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/admin.css">
     <link rel="icon" href="images/logo.png" type="image/png">
+    <style>
+        /* ===== WAYPOINT ROWS ===== */
+        .waypoint-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            transition: border-color 0.2s;
+        }
+        .waypoint-row:hover { border-color: rgba(200,161,78,0.3); }
+        .waypoint-row .wp-location {
+            flex: 1;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 9px 12px;
+            color: inherit;
+            font-size: 0.88rem;
+        }
+        .waypoint-row .wp-location:focus { outline: none; border-color: var(--accent); }
+        .wp-pause-wrap {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            white-space: nowrap;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 7px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .wp-pause-wrap:hover { border-color: rgba(239,68,68,0.4); color: #f87171; }
+        .wp-pause-wrap input[type="checkbox"] { accent-color: #f87171; width: 15px; height: 15px; cursor: pointer; }
+        .wp-pause-wrap.is-paused { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.35); color: #f87171; }
+        .waypoint-order {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(200,161,78,0.15);
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .remove-wp-btn {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.2);
+            color: #f87171;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .remove-wp-btn:hover { background: rgba(239,68,68,0.25); }
+        #waypointEvents:empty::after {
+            content: 'No intermediate stops added. Click "+ Add Stop" to add countries or cities the package passes through.';
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            padding: 14px;
+            text-align: center;
+            border: 1px dashed rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+    </style>
 </head>
 <body>
     <!-- Admin Sidebar -->
@@ -206,6 +287,21 @@
                                 <input type="text" id="shipDest" placeholder="City, Country" required>
                             </div>
                         </div>
+
+                        <!-- Route Waypoints -->
+                        <div class="admin-card-header" style="margin-top:20px; margin-bottom:8px; padding:0;">
+                            <h4 style="display:flex; align-items:center; gap:8px; font-size:0.9rem;">
+                                <i data-lucide="map-pin" style="width:16px;height:16px;color:var(--accent);"></i>
+                                Route Waypoints <span style="font-weight:400; color:var(--text-muted); font-size:0.78rem;">(intermediate stops)</span>
+                            </h4>
+                            <button type="button" class="btn btn-outline" style="padding:7px 14px; font-size:0.8rem; display:flex; align-items:center; gap:6px;" id="addWaypointBtn">
+                                <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Stop
+                            </button>
+                        </div>
+                        <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px; padding:10px 12px; background:rgba(200,161,78,0.06); border-left:3px solid var(--accent); border-radius:4px;">
+                            Add every country or city the package passes through. Toggle <strong>"Pause Here"</strong> to freeze the map marker at that location — the vehicle will stop there until you uncheck it.
+                        </p>
+                        <div id="waypointEvents"></div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label>Weight (kg) *</label>

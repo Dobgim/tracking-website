@@ -152,28 +152,52 @@
 .admin-card-header h3 { font-size: 1.1rem; }
 
 /* Table */
-.admin-table-wrap { overflow-x: auto; }
+.admin-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    position: relative;
+}
 .admin-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 .admin-table th,
 .admin-table td {
-    padding: 14px 16px;
+    padding: 13px 10px;
     text-align: left;
     border-bottom: 1px solid var(--glass-border);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 .admin-table th {
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
 }
 .admin-table td { color: var(--text-light); }
 .admin-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* Column widths — all 7 columns always visible */
+.admin-table th:nth-child(1), .admin-table td:nth-child(1) { width: 130px; } /* Tracking ID */
+.admin-table th:nth-child(2), .admin-table td:nth-child(2) { width: 14%; }   /* Sender */
+.admin-table th:nth-child(3), .admin-table td:nth-child(3) { width: 13%; }   /* Receiver */
+.admin-table th:nth-child(4), .admin-table td:nth-child(4) { width: 20%; }   /* Origin */
+.admin-table th:nth-child(5), .admin-table td:nth-child(5) { width: 20%; }   /* Destination */
+.admin-table th:nth-child(6), .admin-table td:nth-child(6) { width: 115px; } /* Status */
+.admin-table th:nth-child(7), .admin-table td:nth-child(7) { width: 110px; min-width: 110px; } /* Actions */
+
+/* Dashboard recent-shipments table (5 cols) */
+#recentShipmentsTable th:nth-child(1), #recentShipmentsTable td:nth-child(1) { width: 140px; }
+#recentShipmentsTable th:nth-child(2), #recentShipmentsTable td:nth-child(2) { width: auto; }
+#recentShipmentsTable th:nth-child(3), #recentShipmentsTable td:nth-child(3) { width: auto; }
+#recentShipmentsTable th:nth-child(4), #recentShipmentsTable td:nth-child(4) { width: 130px; }
+#recentShipmentsTable th:nth-child(5), #recentShipmentsTable td:nth-child(5) { width: 110px; }
 
 /* Table badges */
 .status-badge {
@@ -325,71 +349,200 @@
 }
 
 /* ===== MOBILE RESPONSIVE ===== */
+
+/* === Tablet (≤ 1024px) === */
+@media (max-width: 1024px) {
+    .admin-sidebar { width: 220px; }
+    .admin-main   { margin-left: 220px; }
+    .admin-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+}
+
+/* === Mobile (≤ 768px) === */
 @media (max-width: 768px) {
+
+    /* ── Sidebar: slide-in overlay ── */
     .admin-sidebar {
+        width: 280px;
         transform: translateX(-100%);
-        box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+        box-shadow: 6px 0 32px rgba(0,0,0,0.6);
+        z-index: 200;
     }
-    .admin-sidebar.open {
-        transform: translateX(0);
+    .admin-sidebar.open { transform: translateX(0); }
+
+    /* Dim overlay when sidebar is open */
+    .admin-sidebar.open::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        left: 280px;
+        background: rgba(0,0,0,0.45);
+        z-index: -1;
     }
-    .admin-main {
-        margin-left: 0;
+
+    /* ── Main content: full width ── */
+    .admin-main { margin-left: 0; }
+
+    /* ── Header ── */
+    .admin-menu-toggle { display: flex; }
+    .admin-header { padding: 14px 16px; gap: 10px; }
+    .admin-header h2 { font-size: 1.05rem; }
+
+    /* ── Sections ── */
+    .admin-section { padding: 14px 12px; }
+
+    /* ── Stats grid: 2 columns ── */
+    .admin-stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .admin-stat-card  { padding: 14px 12px; gap: 10px; }
+    .admin-stat-icon  { width: 40px; height: 40px; border-radius: 10px; }
+    .admin-stat-card h3 { font-size: 1.35rem; }
+    .admin-stat-card p  { font-size: 0.78rem; }
+
+    /* ── Cards ── */
+    .admin-card { padding: 14px 12px; border-radius: 12px; }
+    .admin-card-header {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
     }
-    .admin-menu-toggle { display: block; }
-    .admin-header { padding: 14px 16px; }
-    .admin-header h2 { font-size: 1.1rem; }
-    .admin-section { padding: 16px 12px; }
-    .admin-stats-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
-    .admin-stat-card { padding: 16px; gap: 12px; }
-    .admin-stat-icon { width: 44px; height: 44px; font-size: 1.2rem; }
-    .admin-stat-card h3 { font-size: 1.4rem; }
-    .admin-card { padding: 16px; }
-    .admin-card-header { flex-direction: column; align-items: flex-start; }
-    .admin-card-header > div { width: 100%; flex-direction: column; gap: 8px; }
+    .admin-card-header h3 { font-size: 1rem; }
+    .admin-card-header > div { gap: 8px; }
+
+    /* ── Filter/Search bar ── */
     .admin-search { width: 100%; }
     .admin-select { width: 100%; }
-    .form-row { flex-direction: column; gap: 0; }
-    .form-row .form-group { width: 100% !important; }
-    .timeline-event-row { grid-template-columns: 1fr 1fr; }
-    .timeline-event-row input { font-size: 0.82rem; }
+    .admin-card-header > div[style] { flex-direction: column !important; width: 100%; }
 
-    /* Table responsive - card style */
-    .admin-table thead { display: none; }
-    .admin-table tbody tr {
-        display: block;
-        background: rgba(255,255,255,0.02);
-        border: 1px solid var(--glass-border);
-        border-radius: var(--radius-sm);
-        margin-bottom: 12px;
-        padding: 12px;
+    /* ── TABLE → Card layout ── */
+    .admin-table-wrap {
+        border-radius: 10px;
+        overflow-x: visible; /* let rows stack */
     }
+    .admin-table,
+    .admin-table tbody,
+    .admin-table tr,
+    .admin-table td { display: block; width: 100%; }
+    .admin-table thead { display: none; }
+
+    /* Un-sticky the Actions column on mobile (it stacks) */
+    .admin-table th:last-child,
+    .admin-table td:last-child {
+        position: static;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    .admin-table tbody tr {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        margin-bottom: 12px;
+        padding: 4px 0;
+        overflow: hidden;
+    }
+    .admin-table tbody tr:hover { background: rgba(255,255,255,0.05); }
+
     .admin-table td {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 4px;
+        padding: 10px 14px;
         border-bottom: 1px solid rgba(255,255,255,0.04);
         white-space: normal;
+        font-size: 0.85rem;
+        gap: 8px;
     }
+    .admin-table td:last-child { border-bottom: none; }
+
+    /* Label prefix from data-label */
     .admin-table td::before {
         content: attr(data-label);
         font-weight: 600;
         color: var(--accent);
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-right: 12px;
+        letter-spacing: 0.6px;
         flex-shrink: 0;
+        min-width: 80px;
     }
-    .admin-table td:last-child { border-bottom: none; }
-    .action-btns-group { justify-content: flex-end; }
-    .admin-modal-body { padding: 16px; }
+
+    /* Action buttons row */
+    .action-btns-group {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .action-btn {
+        padding: 8px 14px;
+        font-size: 0.82rem;
+        min-height: 36px;
+    }
+
+    /* ── Form layout ── */
+    .form-row           { flex-direction: column; gap: 0; }
+    .form-row .form-group { width: 100% !important; }
+    .admin-form .form-group { margin-bottom: 14px; }
+    .admin-form label   { font-size: 0.82rem; }
+    .admin-form input,
+    .admin-form select,
+    .admin-form textarea {
+        font-size: 0.9rem;
+        padding: 10px 12px;
+    }
+
+    /* ── Timeline rows: stack vertically ── */
+    .timeline-event-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .timeline-event-row input { font-size: 0.82rem; padding: 8px 10px; }
+
+    /* ── Waypoint rows: stack ── */
+    .waypoint-row {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+    .waypoint-row .wp-location { min-width: 100%; order: 2; }
+    .waypoint-order { order: 1; }
+    .wp-pause-wrap  { order: 3; flex: 1; }
+    .remove-wp-btn  { order: 4; }
+
+    /* ── Modal ── */
+    .admin-modal-content {
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+        max-height: 92vh;
+        margin-top: auto;
+    }
+    .admin-modal {
+        align-items: flex-end;
+        padding: 0;
+    }
+    .admin-modal-body  { padding: 16px; }
+    .admin-modal-header { padding: 16px 20px; }
+
+    /* ── Buttons ── */
+    .btn { min-height: 42px; font-size: 0.88rem; }
+
+    /* ── Messages ── */
+    .message-card { padding: 14px; }
 }
 
+/* === Small phones (≤ 480px) === */
 @media (max-width: 480px) {
     .admin-stats-grid { grid-template-columns: 1fr; }
     .admin-header-right { display: none; }
+
     .timeline-event-row { grid-template-columns: 1fr; }
+    .timeline-event-row input:nth-child(2) { display: none; } /* hide time on tiny screens */
+
+    .admin-stat-card h3 { font-size: 1.5rem; }
+    .admin-section { padding: 10px 8px; }
+    .admin-card    { padding: 12px 10px; }
+
+    .action-btn { padding: 7px 10px; font-size: 0.8rem; }
 }
+
 

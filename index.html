@@ -7,6 +7,125 @@
     <title>Prestige Freight Cargo – Premium Logistics & Freight Solutions</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="images/logo.png" type="image/png">
+    <style>
+        /* ===== HERO TRACKING WIDGET ===== */
+        .hero-tracker {
+            margin-top: 36px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(200,161,78,0.25);
+            border-radius: 20px;
+            padding: 28px 32px;
+            backdrop-filter: blur(12px);
+            max-width: 620px;
+            animation: fadeInUp 0.8s ease 0.3s both;
+        }
+        .hero-tracker-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hero-tracker-label::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.4); }
+        }
+        .hero-track-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .hero-track-input {
+            flex: 1;
+            background: rgba(255,255,255,0.08);
+            border: 1.5px solid rgba(200,161,78,0.3);
+            border-radius: 12px;
+            padding: 14px 20px;
+            color: #fff;
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.3s, background 0.3s;
+        }
+        .hero-track-input::placeholder { color: rgba(255,255,255,0.4); }
+        .hero-track-input:focus {
+            border-color: var(--accent);
+            background: rgba(255,255,255,0.12);
+        }
+        .hero-track-btn {
+            background: var(--accent);
+            color: #0a0f1e;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 28px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            min-width: 120px;
+            justify-content: center;
+        }
+        .hero-track-btn:hover {
+            background: #e0b44a;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(200,161,78,0.35);
+        }
+        .hero-track-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        /* Spinner */
+        .btn-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0,0,0,0.3);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Error state */
+        .hero-track-error {
+            display: none;
+            margin-top: 10px;
+            color: #f87171;
+            font-size: 0.84rem;
+            display: none;
+            align-items: center;
+            gap: 6px;
+        }
+        .hero-track-error.visible {
+            display: flex;
+        }
+        .hero-tracker-hint {
+            margin-top: 10px;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.35);
+        }
+        @media (max-width: 600px) {
+            .hero-tracker { padding: 20px 18px; border-radius: 16px; }
+            .hero-track-form { flex-direction: column; }
+            .hero-track-btn { width: 100%; }
+        }
+    </style>
 </head>
 <body>
     <!-- Preloader -->
@@ -104,8 +223,32 @@
                 <h1>Your Trusted Partner For <span class="highlight">Global Freight</span> Solutions</h1>
                 <p>Prestige Freight Cargo provides secure, efficient, and timely transport solutions for individuals and businesses across local and international destinations.</p>
                 <div class="hero-btns">
-                    <a href="track.html" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px;">Track Package <i data-lucide="arrow-right"></i></a>
                     <a href="services.html" class="btn btn-outline">Our Services</a>
+                </div>
+
+                <!-- ===== HERO TRACKING WIDGET ===== -->
+                <div class="hero-tracker">
+                    <div class="hero-tracker-label">Real-Time Package Tracking</div>
+                    <form class="hero-track-form" id="heroTrackForm" autocomplete="off">
+                        <input
+                            type="text"
+                            id="heroTrackInput"
+                            class="hero-track-input"
+                            placeholder="Enter tracking code (e.g. PPJ-A8X2K9M3)"
+                            required
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <button type="submit" class="hero-track-btn" id="heroTrackBtn">
+                            <span id="heroTrackBtnText" style="display:flex;align-items:center;gap:6px;"><i data-lucide="search" style="width:16px;height:16px;"></i> Track</span>
+                            <span id="heroTrackSpinner" class="btn-spinner" style="display:none;"></span>
+                        </button>
+                    </form>
+                    <div class="hero-track-error" id="heroTrackError">
+                        <i data-lucide="alert-circle" style="width:14px;height:14px;"></i>
+                        <span id="heroTrackErrorMsg">Please enter a valid tracking number.</span>
+                    </div>
+                    <div class="hero-tracker-hint">Example: PF-2026-001 &nbsp;·&nbsp; Track your shipment instantly</div>
                 </div>
                 <!-- Transport mode indicators -->
                 <div class="hero-transport-modes">
@@ -439,6 +582,75 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js"></script>
     <script src="js/main.js"></script>
+    <script>
+    /* ===== HERO TRACKING WIDGET LOGIC ===== */
+    (function() {
+        const heroForm   = document.getElementById('heroTrackForm');
+        const heroInput  = document.getElementById('heroTrackInput');
+        const heroBtn    = document.getElementById('heroTrackBtn');
+        const heroBtnTxt = document.getElementById('heroTrackBtnText');
+        const heroSpinner= document.getElementById('heroTrackSpinner');
+        const heroError  = document.getElementById('heroTrackError');
+        const heroErrMsg = document.getElementById('heroTrackErrorMsg');
+
+        if (!heroForm) return;
+
+        heroForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Reset error state
+            heroError.classList.remove('visible');
+
+            const raw = heroInput.value.trim();
+            if (!raw) {
+                heroErrMsg.textContent = 'Please enter a tracking number.';
+                heroError.classList.add('visible');
+                heroInput.focus();
+                return;
+            }
+
+            const trackingId = raw.toUpperCase();
+
+            // Show loading spinner
+            heroBtnTxt.style.display = 'none';
+            heroSpinner.style.display = 'block';
+            heroBtn.disabled = true;
+
+            try {
+                // Check if tracking ID exists in Supabase before redirecting
+                const { data, error } = await supabase
+                    .from('shipments')
+                    .select('tracking_id')
+                    .eq('tracking_id', trackingId)
+                    .maybeSingle();
+
+                if (error || !data) {
+                    // Not found — show inline error, don't navigate
+                    heroErrMsg.textContent = 'No shipment found for "' + trackingId + '". Please check and try again.';
+                    heroError.classList.add('visible');
+                } else {
+                    // Found — navigate to track page with the ID
+                    window.location.href = 'track.html?id=' + encodeURIComponent(trackingId);
+                    return; // keep spinner while navigating
+                }
+            } catch (err) {
+                heroErrMsg.textContent = 'Connection error. Please try again.';
+                heroError.classList.add('visible');
+            }
+
+            // Restore button if staying on page
+            heroBtnTxt.style.display = 'flex';
+            heroSpinner.style.display = 'none';
+            heroBtn.disabled = false;
+            if (window.lucide) lucide.createIcons();
+        });
+
+        // Clear error on input
+        heroInput.addEventListener('input', function() {
+            heroError.classList.remove('visible');
+        });
+    })();
+    </script>
     <!-- Start of LiveChat (www.livechat.com) code -->
     <script>
         window.__lc = window.__lc || {};

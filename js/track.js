@@ -1,5 +1,5 @@
 /* ===== TRACK.JS - Professional Package Tracking with Supabase ===== */
-/* v5 — Synchronized map progress (all viewers see same position)    */
+/* v6 — Multi-leg waypoint routing + pause-at-location support        */
 
 document.addEventListener('DOMContentLoaded', () => {
     const trackForm     = document.getElementById('trackForm');
@@ -29,13 +29,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === LIVE MAP STATE ===
     let mapState = {
-        marker:       null,
-        pathCoords:   [],
-        index:        0,
-        interval:     null,
-        trackId:      null,
-        savePending:  false,
-        saveTimer:    null
+        marker:            null,
+        pathCoords:        [],
+        index:             0,
+        interval:          null,
+        trackId:           null,
+        savePending:       false,
+        saveTimer:         null,
+        pauseAtIndex:      null,   // path index where vehicle must freeze (from a waypoint pause)
+        waypointIndices:   []      // path indices for each intermediate waypoint
     };
 
     let currentSubscription = null;
@@ -43,12 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentShipmentData = null;
 
     // =========================================================
-    // === SYNCHRONIZED PROGRESS: read / write via Supabase ===
+    // === SYNCHRONIZED PROGRESS ===
     // =========================================================
-    // The map_progress column stores the current step index (integer).
-    // If the column does not exist yet in your DB, run this SQL once:
-    //   ALTER TABLE shipments ADD COLUMN IF NOT EXISTS map_progress INTEGER DEFAULT 0;
-
     async function readProgressFromDB(trackingId) {
         try {
             const { data, error } = await supabase
@@ -58,9 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .single();
             if (error || data == null || data.map_progress == null) return null;
             return parseInt(data.map_progress, 10);
-        } catch (e) {
-            return null;
-        }
+        } catch (e) { return null; }
     }
 
     async function writeProgressToDB(trackingId, index) {
@@ -69,11 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('shipments')
                 .update({ map_progress: index })
                 .eq('tracking_id', trackingId);
-        } catch (e) { /* silently ignore if column doesn't exist */ }
+        } catch (e) {}
     }
 
-    // Debounced DB write — fires 4 seconds after the last call
-    // so we don't hammer the database every second
     function scheduleSave(trackingId, index) {
         if (mapState.saveTimer) clearTimeout(mapState.saveTimer);
         mapState.saveTimer = setTimeout(() => {
@@ -81,13 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 4000);
     }
 
-    // === SUPABASE REALTIME: listen for admin status changes ===
+    // === SUPABASE REALTIME ===
     function subscribeToShipment(trackingId) {
         if (currentSubscription) supabase.removeChannel(currentSubscription);
         currentSubscription = supabase
             .channel('shipment-status-' + trackingId)
-            .on(
-                'postgres_changes',
+            .on('postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'shipments', filter: `tracking_id=eq.${trackingId}` },
                 payload => {
                     currentShipmentData = payload.new;
@@ -99,14 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === STATUS CONFIG ===
     const STATUS_CONFIG = {
-        'pending':          { icon: 'clock',         label: 'Pending',          desc: 'Your shipment has been created and is awaiting pickup.',         step: 0 },
-        'picked-up':        { icon: 'package-plus',  label: 'Picked Up',        desc: 'Package has been picked up from the sender.',                   step: 1 },
-        'in-transit':       { icon: 'plane',         label: 'In Transit',       desc: 'Your shipment is on its way to the destination.',               step: 2 },
-        'out-for-delivery': { icon: 'truck',         label: 'Out for Delivery', desc: 'Package is out for delivery to the receiver.',                  step: 3 },
-        'delivered':        { icon: 'check-circle',  label: 'Delivered',        desc: 'Package has been delivered successfully.',                       step: 4 },
-        'on-hold':          { icon: 'pause-circle',  label: 'On Hold',          desc: 'Shipment is on hold. Contact support for details.',             step: -1 },
-        'returned':         { icon: 'undo',          label: 'Returned',         desc: 'Package has been returned to the sender.',                      step: -1 },
-        'cancelled':        { icon: 'x-circle',      label: 'Cancelled',        desc: 'This shipment has been cancelled.',                             step: -1 }
+        'pending':          { icon: 'clock',         label: 'Pending',          desc: 'Your shipment has been created and is awaiting pickup.',       step: 0 },
+        'picked-up':        { icon: 'package-plus',  label: 'Picked Up',        desc: 'Package has been picked up from the sender.',                 step: 1 },
+        'in-transit':       { icon: 'plane',         label: 'In Transit',       desc: 'Your shipment is on its way to the destination.',             step: 2 },
+        'out-for-delivery': { icon: 'truck',         label: 'Out for Delivery', desc: 'Package is out for delivery to the receiver.',                step: 3 },
+        'delivered':        { icon: 'check-circle',  label: 'Delivered',        desc: 'Package has been delivered successfully.',                     step: 4 },
+        'on-hold':          { icon: 'pause-circle',  label: 'On Hold',          desc: 'Shipment is on hold. Contact support for details.',           step: -1 },
+        'returned':         { icon: 'undo',          label: 'Returned',         desc: 'Package has been returned to the sender.',                    step: -1 },
+        'cancelled':        { icon: 'x-circle',      label: 'Cancelled',        desc: 'This shipment has been cancelled.',                           step: -1 }
     };
 
     const PROGRESS_STEPS = [
@@ -154,21 +147,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const banner = document.getElementById('statusBanner');
         banner.className = 'status-banner ' + s.status;
-        document.getElementById('statusIcon').innerHTML   = `<i data-lucide="${config.icon}"></i>`;
+        document.getElementById('statusIcon').innerHTML    = `<i data-lucide="${config.icon}"></i>`;
         document.getElementById('statusLabel').textContent = config.label;
         document.getElementById('statusDesc').textContent  = config.desc;
 
         renderProgress(config.step);
 
-        document.getElementById('invSender').textContent        = s.sender         || '—';
-        document.getElementById('invSenderEmail').textContent   = s.sender_email   || '—';
-        document.getElementById('invSenderNumber').textContent  = s.sender_number  || '—';
-        document.getElementById('invOrigin').textContent        = s.origin         || '—';
+        document.getElementById('invSender').textContent         = s.sender         || '—';
+        document.getElementById('invSenderEmail').textContent    = s.sender_email   || '—';
+        document.getElementById('invSenderNumber').textContent   = s.sender_number  || '—';
+        document.getElementById('invOrigin').textContent         = s.origin         || '—';
 
-        document.getElementById('invReceiver').textContent      = s.receiver       || '—';
-        document.getElementById('invReceiverEmail').textContent = s.receiver_email || '—';
-        document.getElementById('invReceiverNumber').textContent= s.receiver_number|| '—';
-        document.getElementById('invDestination').textContent   = s.destination    || '—';
+        document.getElementById('invReceiver').textContent       = s.receiver       || '—';
+        document.getElementById('invReceiverEmail').textContent  = s.receiver_email || '—';
+        document.getElementById('invReceiverNumber').textContent = s.receiver_number|| '—';
+        document.getElementById('invDestination').textContent    = s.destination    || '—';
 
         document.getElementById('packageTableBody').innerHTML = `
             <tr>
@@ -182,18 +175,59 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         renderTimeline(s.timeline);
+        renderWaypointRoute(s);
 
         if (!isUpdate) {
-            // First load — render the map fresh (with DB-synced position)
             mapState.trackId = s.tracking_id;
             renderMap(s);
             trackResult.style.display = 'block';
             setTimeout(() => trackResult.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
         } else {
-            // Live admin update — pause or resume based on new status
+            // Live update: re-read waypoints (pause may have changed) and update animation
+            mapState.pauseAtIndex = computePauseAtIndex(s.waypoints || [], mapState.waypointIndices);
             updateMapAnimation(s.status);
         }
 
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // === WAYPOINT ROUTE DISPLAY (below invoice, above map) ===
+    function renderWaypointRoute(s) {
+        const waypoints = s.waypoints || [];
+        const container = document.getElementById('waypointRouteDisplay');
+        if (!container) return;
+
+        if (!waypoints.length) {
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'block';
+        const stops = [
+            { label: s.origin, type: 'origin' },
+            ...waypoints.map(w => ({ label: w.location, type: w.pause ? 'pause' : 'stop' })),
+            { label: s.destination, type: 'destination' }
+        ];
+
+        container.innerHTML = `
+            <h4 style="display:flex; align-items:center; gap:8px; color:var(--accent); font-size:0.78rem; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:14px;">
+                <i data-lucide="route" style="width:14px; height:14px;"></i> Package Route
+            </h4>
+            <div class="route-stops-list">
+                ${stops.map((stop, i) => `
+                    <div class="route-stop-item ${stop.type}">
+                        <div class="route-stop-dot"></div>
+                        <div class="route-stop-label">
+                            <span class="stop-name">${stop.label || '—'}</span>
+                            ${stop.type === 'pause' ? '<span class="pause-badge"><i data-lucide="pause-circle" style="width:11px;height:11px;vertical-align:middle;"></i> Paused Here</span>' : ''}
+                            ${stop.type === 'origin' ? '<span class="origin-badge">Origin</span>' : ''}
+                            ${stop.type === 'destination' ? '<span class="dest-badge">Destination</span>' : ''}
+                        </div>
+                    </div>
+                    ${i < stops.length - 1 ? '<div class="route-stop-connector"></div>' : ''}
+                `).join('')}
+            </div>
+        `;
         if (window.lucide) lucide.createIcons();
     }
 
@@ -237,11 +271,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.lucide) lucide.createIcons();
     }
 
+    // =========================================================
+    // === GEOCODING HELPER ===
+    // =========================================================
+    function geocodePlace(geocoder, address) {
+        return new Promise(resolve => {
+            geocoder.geocode({ address }, (results, status) => {
+                if (status === 'OK' && results[0]) resolve(results[0].geometry.location);
+                else resolve(null);
+            });
+        });
+    }
+
+    // =========================================================
+    // === COMPUTE pauseAtIndex from waypoints + path indices ===
+    // =========================================================
+    function computePauseAtIndex(waypoints, waypointIndices) {
+        if (!waypoints || !waypoints.length) return null;
+        for (let i = 0; i < waypoints.length; i++) {
+            if (waypoints[i] && waypoints[i].pause && waypointIndices[i] !== undefined) {
+                return waypointIndices[i];
+            }
+        }
+        return null;
+    }
+
+    // =========================================================
     // === RENDER MAP (called once per shipment load) ===
+    // =========================================================
     async function renderMap(s) {
         const origin      = s.origin;
         const destination = s.destination;
         const status      = s.status;
+        const waypoints   = s.waypoints || [];
 
         const mapContainer = document.getElementById('mapContainer');
         const mapDiv       = document.getElementById('googleMap');
@@ -253,16 +315,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         mapContainer.style.display = 'block';
-        routeInfo.innerHTML = `${origin} <i data-lucide="arrow-right" style="width:14px; height:14px; vertical-align:middle; margin:0 8px;"></i> ${destination}`;
-        if (window.lucide) lucide.createIcons();
 
-        // Stop any previous animation
-        if (mapState.interval) {
-            window.clearInterval(mapState.interval);
-            mapState.interval = null;
-        }
+        // Stop previous animation
+        if (mapState.interval) { clearInterval(mapState.interval); mapState.interval = null; }
 
-        // ─── Read saved progress from DB (synchronized for all viewers) ───
         const savedIndex = await readProgressFromDB(s.tracking_id);
 
         const geocoder = new google.maps.Geocoder();
@@ -275,121 +331,146 @@ document.addEventListener('DOMContentLoaded', () => {
             zoomControl:       true
         });
 
-        geocoder.geocode({ address: origin }, (r1, s1) => {
-            if (s1 !== 'OK' || !r1[0]) return;
-            const originCoords = r1[0].geometry.location;
+        // Build ordered locations: origin → waypoints → destination
+        const validWaypoints = waypoints.filter(w => w.location && w.location.trim());
+        const allLocations   = [origin, ...validWaypoints.map(w => w.location), destination];
 
-            // Green dot = origin
-            new google.maps.Marker({
-                position: originCoords,
-                map,
-                title: 'Origin: ' + origin,
-                icon: { url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png', scaledSize: new google.maps.Size(36, 36) }
-            });
+        // Geocode all locations in parallel
+        const allCoords = await Promise.all(allLocations.map(loc => geocodePlace(geocoder, loc)));
 
-            geocoder.geocode({ address: destination }, (r2, s2) => {
-                if (s2 !== 'OK' || !r2[0]) return;
-                const destCoords = r2[0].geometry.location;
+        // Must have valid origin and destination
+        if (!allCoords[0] || !allCoords[allCoords.length - 1]) {
+            mapContainer.style.display = 'none';
+            return;
+        }
 
-                // Red pin = destination
-                new google.maps.Marker({
-                    position: destCoords,
-                    map,
-                    title: 'Destination: ' + destination,
-                    icon: { url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new google.maps.Size(36, 36) }
-                });
-
-                // Build curved flight path with more points for smoother animation
-                const pathCoords = buildCurvedPath(originCoords, destCoords, 1200);
-
-                // Dashed background line
-                new google.maps.Polyline({
-                    path: [originCoords, destCoords],
-                    geodesic: true,
-                    strokeColor: '#9ca3af',
-                    strokeOpacity: 0,
-                    icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.5, scale: 3 }, offset: '0', repeat: '18px' }],
-                    map
-                });
-
-                // Solid blue curved route
-                new google.maps.Polyline({
-                    path: pathCoords,
-                    geodesic: true,
-                    strokeColor: '#3b82f6',
-                    strokeOpacity: 0.85,
-                    strokeWeight: 4,
-                    map
-                });
-
-                // Vehicle marker
-                const vehicleIconUrl = getIconForType(s.type);
-                const vehicleMarker = new google.maps.Marker({
-                    position: originCoords,
-                    map,
-                    icon: {
-                        url:        vehicleIconUrl,
-                        scaledSize: new google.maps.Size(48, 48),
-                        anchor:     new google.maps.Point(24, 24)
-                    },
-                    zIndex: 999,
-                    title: s.type || 'Package'
-                });
-
-                // Store in shared state
-                mapState.marker     = vehicleMarker;
-                mapState.pathCoords = pathCoords;
-                mapState.trackId    = s.tracking_id;
-
-                // === RESTORE POSITION (from DB — same for ALL viewers) ===
-                if (savedIndex !== null && savedIndex > 0) {
-                    // Resume from saved DB position — same position everyone sees
-                    mapState.index = Math.min(savedIndex, pathCoords.length - 1);
-                } else {
-                    // First time shipment is ever tracked — set starting position by status
-                    let startPct = 0;
-                    if      (status === 'pending')          startPct = 0;
-                    else if (status === 'picked-up')        startPct = 2;
-                    else if (status === 'in-transit')       startPct = 10;
-                    else if (status === 'out-for-delivery') startPct = 80;
-                    else if (status === 'delivered')        startPct = 100;
-                    else                                    startPct = 5;
-                    mapState.index = Math.floor((startPct / 100) * (pathCoords.length - 1));
-                    // Save this initial position to DB immediately
-                    writeProgressToDB(s.tracking_id, mapState.index);
-                }
-                vehicleMarker.setPosition(pathCoords[mapState.index]);
-
-                // Fit map bounds
-                const bounds = new google.maps.LatLngBounds();
-                bounds.extend(originCoords);
-                bounds.extend(destCoords);
-                map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
-
-                // Start animation based on current status
-                updateMapAnimation(status);
-            });
+        // --- Origin marker (green) ---
+        new google.maps.Marker({
+            position: allCoords[0], map,
+            title: 'Origin: ' + origin,
+            icon: { url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png', scaledSize: new google.maps.Size(36, 36) }
         });
+
+        // --- Destination marker (red) ---
+        new google.maps.Marker({
+            position: allCoords[allCoords.length - 1], map,
+            title: 'Destination: ' + destination,
+            icon: { url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png', scaledSize: new google.maps.Size(36, 36) }
+        });
+
+        // --- Waypoint markers (orange = pause, yellow = pass-through) ---
+        for (let i = 1; i < allCoords.length - 1; i++) {
+            if (!allCoords[i]) continue;
+            const wp      = validWaypoints[i - 1];
+            const isPause = wp && wp.pause;
+            new google.maps.Marker({
+                position: allCoords[i], map,
+                title: (isPause ? '⏸ Paused at: ' : '📍 Stop: ') + allLocations[i],
+                icon: {
+                    url: isPause
+                        ? 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png'
+                        : 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+                    scaledSize: new google.maps.Size(32, 32)
+                }
+            });
+        }
+
+        // --- Build multi-segment curved path ---
+        const TOTAL_POINTS = 1200;
+        const validCoords  = allCoords.filter(Boolean);
+        const segCount     = validCoords.length - 1;
+        const ptsPerSeg    = Math.max(50, Math.floor(TOTAL_POINTS / segCount));
+
+        let fullPath         = [];
+        let waypointIndices  = []; // path index for each intermediate stop junction
+
+        for (let i = 0; i < segCount; i++) {
+            const segPts = buildCurvedPath(validCoords[i], validCoords[i + 1], ptsPerSeg);
+            if (i === 0) {
+                fullPath = [...segPts];
+            } else {
+                fullPath.push(...segPts.slice(1)); // avoid duplicating junction point
+            }
+            if (i < segCount - 1) {
+                waypointIndices.push(fullPath.length - 1);
+            }
+        }
+
+        // --- Draw dashed background line ---
+        new google.maps.Polyline({
+            path: [validCoords[0], validCoords[validCoords.length - 1]],
+            geodesic: true,
+            strokeColor: '#9ca3af', strokeOpacity: 0,
+            icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 0.5, scale: 3 }, offset: '0', repeat: '18px' }],
+            map
+        });
+
+        // --- Draw solid route line ---
+        new google.maps.Polyline({
+            path: fullPath,
+            geodesic: true,
+            strokeColor: '#3b82f6', strokeOpacity: 0.85, strokeWeight: 4,
+            map
+        });
+
+        // --- Vehicle marker ---
+        const vehicleMarker = new google.maps.Marker({
+            position: validCoords[0], map,
+            icon: { url: getIconForType(s.type), scaledSize: new google.maps.Size(48, 48), anchor: new google.maps.Point(24, 24) },
+            zIndex: 999, title: s.type || 'Package'
+        });
+
+        // --- Store in mapState ---
+        mapState.marker          = vehicleMarker;
+        mapState.pathCoords      = fullPath;
+        mapState.trackId         = s.tracking_id;
+        mapState.waypointIndices = waypointIndices;
+        mapState.pauseAtIndex    = computePauseAtIndex(validWaypoints, waypointIndices);
+
+        // --- Restore or set start position ---
+        if (savedIndex !== null && savedIndex > 0) {
+            mapState.index = Math.min(savedIndex, fullPath.length - 1);
+        } else {
+            let startPct = 0;
+            if      (status === 'pending')          startPct = 0;
+            else if (status === 'picked-up')        startPct = 2;
+            else if (status === 'in-transit')       startPct = 10;
+            else if (status === 'out-for-delivery') startPct = 80;
+            else if (status === 'delivered')        startPct = 100;
+            else                                    startPct = 5;
+            mapState.index = Math.floor((startPct / 100) * (fullPath.length - 1));
+            writeProgressToDB(s.tracking_id, mapState.index);
+        }
+        vehicleMarker.setPosition(fullPath[mapState.index]);
+
+        // --- Fit map bounds ---
+        const bounds = new google.maps.LatLngBounds();
+        validCoords.forEach(c => bounds.extend(c));
+        map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
+
+        // --- Update route header ---
+        const stopLabels = [origin, ...validWaypoints.map(w => `${w.pause ? '⏸ ' : ''}${w.location}`), destination];
+        routeInfo.innerHTML = stopLabels.map((l, i) =>
+            i < stopLabels.length - 1
+                ? `${l} <i data-lucide="arrow-right" style="width:12px;height:12px;vertical-align:middle;margin:0 4px;"></i>`
+                : l
+        ).join('');
+        if (window.lucide) lucide.createIcons();
+
+        // --- Start animation ---
+        updateMapAnimation(status);
     }
 
-    // ================================================================
+    // =========================================================
     // === ANIMATION ENGINE ===
-    // Called on first load AND on every live realtime status update
-    // ================================================================
+    // =========================================================
     function updateMapAnimation(newStatus) {
         if (!mapState.marker || !mapState.pathCoords.length) return;
 
-        // ALWAYS stop the existing animation first — freeze vehicle exactly where it is
-        if (mapState.interval) {
-            window.clearInterval(mapState.interval);
-            mapState.interval = null;
-        }
-        if (mapState.saveTimer) {
-            clearTimeout(mapState.saveTimer);
-            mapState.saveTimer = null;
-        }
+        // Stop existing interval
+        if (mapState.interval) { clearInterval(mapState.interval); mapState.interval = null; }
+        if (mapState.saveTimer) { clearTimeout(mapState.saveTimer); mapState.saveTimer = null; }
 
-        // Save current position to DB immediately when status changes
         writeProgressToDB(mapState.trackId, mapState.index);
 
         // ── DELIVERED: snap to final destination ──
@@ -400,51 +481,68 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // ── STATIONARY statuses: freeze vehicle exactly where it is ──
-        const movingStatuses = ['in-transit', 'out-for-delivery', 'picked-up'];
-        if (!movingStatuses.includes(newStatus)) {
-            // PAUSED — do nothing, vehicle stays frozen
+        // ── WAYPOINT PAUSE: if there's a pause point ahead, move toward it and stop ──
+        const pauseIdx = mapState.pauseAtIndex;
+        if (pauseIdx !== null) {
+            // If vehicle is already at or past the pause waypoint → freeze it there
+            if (mapState.index >= pauseIdx) {
+                mapState.index = pauseIdx;
+                mapState.marker.setPosition(mapState.pathCoords[pauseIdx]);
+                writeProgressToDB(mapState.trackId, pauseIdx);
+                return; // Frozen at waypoint — admin must uncheck pause to continue
+            }
+
+            // Vehicle hasn't reached the pause yet — animate toward it
+            const movingStatuses = ['in-transit', 'out-for-delivery', 'picked-up'];
+            if (!movingStatuses.includes(newStatus)) return;
+
+            const maxIndex = pauseIdx;
+            if (mapState.index >= maxIndex) return;
+
+            const msPerStep = newStatus === 'picked-up' ? 8000 : newStatus === 'out-for-delivery' ? 5000 : 12000;
+
+            mapState.interval = setInterval(() => {
+                if (mapState.index < maxIndex) {
+                    mapState.index++;
+                    mapState.marker.setPosition(mapState.pathCoords[mapState.index]);
+                    scheduleSave(mapState.trackId, mapState.index);
+                } else {
+                    clearInterval(mapState.interval);
+                    mapState.interval = null;
+                    writeProgressToDB(mapState.trackId, mapState.index);
+                }
+            }, msPerStep);
             return;
         }
 
-        // ── MOVING: crawl forward toward the target zone ──
-        // Target percentage of the path (NEVER reaches 100% until delivered)
+        // ── STATIONARY statuses (no waypoint pause): freeze vehicle ──
+        const movingStatuses = ['in-transit', 'out-for-delivery', 'picked-up'];
+        if (!movingStatuses.includes(newStatus)) return;
+
+        // ── NORMAL MOVEMENT (no waypoint pause) ──
         let targetPct;
-        if      (newStatus === 'picked-up')        targetPct = 5;   // only slightly past origin
-        else if (newStatus === 'in-transit')       targetPct = 78;  // mid-route
-        else if (newStatus === 'out-for-delivery') targetPct = 96;  // close but not at destination
+        if      (newStatus === 'picked-up')        targetPct = 5;
+        else if (newStatus === 'in-transit')       targetPct = 78;
+        else if (newStatus === 'out-for-delivery') targetPct = 96;
         else                                        targetPct = 78;
 
         const maxIndex = Math.floor((targetPct / 100) * (mapState.pathCoords.length - 1));
+        if (mapState.index >= maxIndex) return;
 
-        if (mapState.index >= maxIndex) {
-            // Already at or beyond the ceiling for this status — hold position
-            return;
-        }
-
-        // ── Speed settings ──
-        // Step interval in milliseconds — higher = slower movement
-        // 1200 path points total:
-        //   picked-up    → 60 steps   @  8000ms/step = about 8 mins per visible move (very slow)
-        //   in-transit   → ~936 steps @ 12000ms/step = very slow crawl
-        //   out-delivery → ~192 steps @  5000ms/step = slightly faster near end
         let msPerStep;
-        if      (newStatus === 'picked-up')        msPerStep = 8000;   // very slow
-        else if (newStatus === 'in-transit')       msPerStep = 12000;  // slowest — long haul
-        else if (newStatus === 'out-for-delivery') msPerStep = 5000;   // last mile, bit faster
+        if      (newStatus === 'picked-up')        msPerStep = 8000;
+        else if (newStatus === 'in-transit')       msPerStep = 12000;
+        else if (newStatus === 'out-for-delivery') msPerStep = 5000;
         else                                        msPerStep = 12000;
 
-        mapState.interval = window.setInterval(() => {
+        mapState.interval = setInterval(() => {
             if (mapState.index < maxIndex) {
                 mapState.index++;
                 mapState.marker.setPosition(mapState.pathCoords[mapState.index]);
-                // Sync to DB every step (debounced — actual write fires 4s after last call)
                 scheduleSave(mapState.trackId, mapState.index);
             } else {
-                // Reached ceiling for this status — stop
-                window.clearInterval(mapState.interval);
+                clearInterval(mapState.interval);
                 mapState.interval = null;
-                // Final save for this stop
                 writeProgressToDB(mapState.trackId, mapState.index);
             }
         }, msPerStep);
@@ -465,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return points;
     }
 
-    // === URL PARAM: auto-track if ?id=XYZ is in the URL ===
+    // === URL PARAM: auto-track if ?id=XYZ ===
     const urlParams  = new URLSearchParams(window.location.search);
     const urlTrackId = urlParams.get('id');
     if (urlTrackId) {

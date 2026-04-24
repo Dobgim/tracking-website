@@ -187,6 +187,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelEditBtn = document.getElementById('cancelEdit');
 
     document.getElementById('addTimelineBtn').addEventListener('click', addTimelineRow);
+    document.getElementById('addWaypointBtn').addEventListener('click', () => addWaypointRow());
+
+    // === WAYPOINT ROWS ===
+    function addWaypointRow(data = {}) {
+        const container = document.getElementById('waypointEvents');
+        const index     = container.children.length + 1;
+        const row       = document.createElement('div');
+        row.className   = 'waypoint-row';
+        const isPaused  = !!data.pause;
+        row.innerHTML = `
+            <div class="waypoint-order">${index}</div>
+            <input type="text" class="wp-location" placeholder="City, Country (e.g. Mexico City, Mexico)" value="${data.location || ''}">
+            <label class="wp-pause-wrap ${isPaused ? 'is-paused' : ''}" title="Freeze the map marker at this location">
+                <input type="checkbox" class="wp-pause" ${isPaused ? 'checked' : ''}>
+                ⏸ Pause Here
+            </label>
+            <button type="button" class="remove-wp-btn" title="Remove stop">✕</button>
+        `;
+        // Toggle pause styling
+        const cb    = row.querySelector('.wp-pause');
+        const label = row.querySelector('.wp-pause-wrap');
+        cb.addEventListener('change', () => {
+            label.classList.toggle('is-paused', cb.checked);
+        });
+        // Remove row
+        row.querySelector('.remove-wp-btn').addEventListener('click', () => {
+            row.remove();
+            // Re-number remaining rows
+            document.querySelectorAll('.waypoint-row .waypoint-order').forEach((el, i) => {
+                el.textContent = i + 1;
+            });
+        });
+        container.appendChild(row);
+        if (window.lucide) lucide.createIcons();
+    }
 
     function addTimelineRow(data = {}) {
         const container = document.getElementById('timelineEvents');
@@ -238,7 +273,17 @@ document.addEventListener('DOMContentLoaded', () => {
             delivery_time: document.getElementById('shipDeliveryTime').value || null,
             piece_type: document.getElementById('shipPieceType').value.trim(),
             description: document.getElementById('shipDescription').value.trim(),
-            timeline: timeline
+            timeline: timeline,
+            waypoints: (() => {
+                const rows = document.querySelectorAll('.waypoint-row');
+                const wps  = [];
+                rows.forEach(r => {
+                    const loc   = r.querySelector('.wp-location').value.trim();
+                    const pause = r.querySelector('.wp-pause').checked;
+                    if (loc) wps.push({ location: loc, pause });
+                });
+                return wps;
+            })()
         };
 
         // Auto-add "Shipment Created" timeline if new and no timeline
@@ -306,7 +351,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         shipmentForm.reset();
-        document.getElementById('timelineEvents').innerHTML = '';
+        document.getElementById('timelineEvents').innerHTML  = '';
+        document.getElementById('waypointEvents').innerHTML  = '';
         document.getElementById('shipTrackingId').value = '';
         switchSection('shipments');
     });
@@ -318,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('formTitle').textContent = 'Add New Shipment';
         shipmentForm.reset();
         document.getElementById('timelineEvents').innerHTML = '';
+        document.getElementById('waypointEvents').innerHTML = '';
         document.getElementById('shipTrackingId').value = '';
     });
 
@@ -358,6 +405,13 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = '';
         if (s.timeline && s.timeline.length > 0) {
             s.timeline.forEach(t => addTimelineRow(t));
+        }
+
+        // Populate waypoints
+        const wpContainer = document.getElementById('waypointEvents');
+        wpContainer.innerHTML = '';
+        if (s.waypoints && s.waypoints.length > 0) {
+            s.waypoints.forEach(w => addWaypointRow(w));
         }
 
         switchSection('add-shipment');

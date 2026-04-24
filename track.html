@@ -294,6 +294,68 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* ===== WAYPOINT ROUTE DISPLAY ===== */
+        .waypoint-route-display {
+            margin: 20px 0 0;
+            padding: 20px 28px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            animation: fadeInUp 0.7s ease 0.1s both;
+        }
+        .route-stops-list { display: flex; flex-direction: column; gap: 0; }
+        .route-stop-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 8px 0;
+        }
+        .route-stop-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.15);
+        }
+        .route-stop-item.origin .route-stop-dot   { background: #4ade80; border-color: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.4); }
+        .route-stop-item.destination .route-stop-dot { background: #f87171; border-color: #f87171; box-shadow: 0 0 8px rgba(248,113,113,0.4); }
+        .route-stop-item.pause .route-stop-dot    { background: #fb923c; border-color: #fb923c; box-shadow: 0 0 8px rgba(251,146,60,0.5); animation: pulseGlow 2s infinite; }
+        .route-stop-item.stop .route-stop-dot     { background: #facc15; border-color: #facc15; }
+        .route-stop-label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .stop-name { font-size: 0.9rem; font-weight: 500; }
+        .pause-badge {
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: rgba(251,146,60,0.15);
+            color: #fb923c;
+            border: 1px solid rgba(251,146,60,0.3);
+            font-weight: 600;
+        }
+        .origin-badge {
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: rgba(74,222,128,0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74,222,128,0.25);
+        }
+        .dest-badge {
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: rgba(248,113,113,0.1);
+            color: #f87171;
+            border: 1px solid rgba(248,113,113,0.25);
+        }
+        .route-stop-connector {
+            width: 2px;
+            height: 16px;
+            background: rgba(255,255,255,0.12);
+            margin-left: 6px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .invoice-header { flex-direction: column; text-align: center; padding: 20px; }
@@ -444,6 +506,9 @@
                     </div>
                 </div>
 
+                <!-- Waypoint Route Display (shown only when waypoints exist) -->
+                <div class="waypoint-route-display" id="waypointRouteDisplay" style="display:none;"></div>
+
                 <!-- Google Maps Route -->
                 <div class="map-container" id="mapContainer">
                     <div class="map-header">
@@ -507,7 +572,7 @@
     <script src="js/supabase-config.js?v=3"></script>
     <script src="js/main.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBpxYpVUtQlXjQgBCJNDvLkADlgTQ9IbLs&libraries=places"></script>
-    <script src="js/track.js?v=5"></script>
+    <script src="js/track.js?v=6"></script>
     <!-- Start of LiveChat (www.livechat.com) code -->
     <script>
         window.__lc = window.__lc || {};
