@@ -87,9 +87,22 @@
             border: 1px dashed rgba(255,255,255,0.1);
             border-radius: 8px;
         }
+        /* ── Sidebar backdrop overlay ── */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 199;
+            backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.show { display: block; }
     </style>
 </head>
 <body>
+    <!-- Sidebar backdrop overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Admin Sidebar -->
     <div class="admin-layout">
         <aside class="admin-sidebar" id="adminSidebar">

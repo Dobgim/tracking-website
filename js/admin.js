@@ -47,16 +47,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sectionName === 'shipments') renderShipments();
         if (sectionName === 'messages') renderMessages();
 
-        // Close mobile sidebar
+        // Close mobile sidebar and overlay
         if (sidebar) sidebar.classList.remove('open');
+        if (document.getElementById('sidebarOverlay')) {
+            document.getElementById('sidebarOverlay').classList.remove('show');
+        }
     }
 
     // === MOBILE SIDEBAR TOGGLE ===
     const menuToggle = document.getElementById('adminMenuToggle');
     const sidebar = document.getElementById('adminSidebar');
-    if (menuToggle && sidebar) {
-        menuToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    function toggleSidebar(forceClose = false) {
+        if (!sidebar || !sidebarOverlay) return;
+        if (forceClose) {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('show');
+        } else {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('show');
+        }
     }
+
+    if (menuToggle) menuToggle.addEventListener('click', () => toggleSidebar());
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', () => toggleSidebar(true));
 
     // === LOGOUT ===
     document.getElementById('logoutBtn').addEventListener('click', () => {

@@ -369,16 +369,6 @@
     }
     .admin-sidebar.open { transform: translateX(0); }
 
-    /* Dim overlay when sidebar is open */
-    .admin-sidebar.open::after {
-        content: '';
-        position: fixed;
-        inset: 0;
-        left: 280px;
-        background: rgba(0,0,0,0.45);
-        z-index: -1;
-    }
-
     /* ── Main content: full width ── */
     .admin-main { margin-left: 0; }
 
