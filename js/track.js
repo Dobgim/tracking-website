@@ -507,8 +507,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (mapState.index >= maxIndex) return;
 
             const stepsToGo = maxIndex - mapState.index;
-            // 3 minutes = 180,000ms divided by steps remaining (min 80ms so it's visibly fast)
-            const msPerStep = Math.max(80, Math.floor(180000 / stepsToGo));
+            // 15 seconds = 15,000ms divided by steps remaining
+            const msPerStep = Math.max(20, Math.floor(15000 / stepsToGo));
 
             mapState.interval = setInterval(() => {
                 if (mapState.index < maxIndex) {
@@ -539,10 +539,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mapState.index >= maxIndex) return;
 
         let msPerStep;
-        if      (newStatus === 'picked-up')        msPerStep = 8000;
-        else if (newStatus === 'in-transit')       msPerStep = 12000;
-        else if (newStatus === 'out-for-delivery') msPerStep = 5000;
-        else                                        msPerStep = 12000;
+        if      (newStatus === 'picked-up')        msPerStep = 80;
+        else if (newStatus === 'in-transit')       msPerStep = 120;
+        else if (newStatus === 'out-for-delivery') msPerStep = 50;
+        else                                        msPerStep = 120;
 
         mapState.interval = setInterval(() => {
             if (mapState.index < maxIndex) {
