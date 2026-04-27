@@ -184,7 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => trackResult.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
         } else {
             // Live update: re-read waypoints (pause may have changed) and update animation
-            mapState.pauseAtIndex = computePauseAtIndex(s.waypoints || [], mapState.waypointIndices);
+            const validWp = (s.waypoints || []).filter(w => w.location && w.location.trim());
+            mapState.pauseAtIndex = computePauseAtIndex(validWp, mapState.waypointIndices);
             updateMapAnimation(s.status);
         }
 
@@ -479,87 +480,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
         writeProgressToDB(mapState.trackId, mapState.index);
 
-        // ── DELIVERED: snap to final destination ──
-        if (newStatus === 'delivered') {
-            mapState.index = mapState.pathCoords.length - 1;
-            mapState.marker.setPosition(mapState.pathCoords[mapState.index]);
-            writeProgressToDB(mapState.trackId, mapState.index);
-            return;
-        }
+        const movingStatuses = ['in-transit', 'out-for-delivery', 'picked-up', 'delivered'];
+        if (!movingStatuses.includes(newStatus)) return; // Stationary statuses freeze exactly where they are
 
-        // ── WAYPOINT PAUSE: if there's a pause point ahead, move toward it and stop ──
-        const pauseIdx = mapState.pauseAtIndex;
-        if (pauseIdx !== null) {
-            // If vehicle is already at or past the pause waypoint → freeze it there
-            if (mapState.index >= pauseIdx) {
-                mapState.index = pauseIdx;
-                mapState.marker.setPosition(mapState.pathCoords[pauseIdx]);
-                writeProgressToDB(mapState.trackId, pauseIdx);
-                return; // Frozen at waypoint — admin must uncheck pause to continue
-            }
-
-            // Vehicle hasn't reached the pause yet — animate toward it
-            // in EXACTLY 3 minutes regardless of how many steps remain
-            const movingStatuses = ['in-transit', 'out-for-delivery', 'picked-up'];
-            if (!movingStatuses.includes(newStatus)) return;
-
-            const maxIndex    = pauseIdx;
-            if (mapState.index >= maxIndex) return;
-
-            const stepsToGo = maxIndex - mapState.index;
-            // 15 seconds = 15,000ms divided by steps remaining
-            const msPerStep = Math.max(20, Math.floor(15000 / stepsToGo));
-
-            mapState.interval = setInterval(() => {
-                if (mapState.index < maxIndex) {
-                    mapState.index++;
-                    // Hard-clamp: if we've hit or passed the pause point, stop exactly there
-                    if (mapState.index >= maxIndex) {
-                        mapState.index = maxIndex;
-                        mapState.marker.setPosition(mapState.pathCoords[maxIndex]);
-                        clearInterval(mapState.interval);
-                        mapState.interval = null;
-                        writeProgressToDB(mapState.trackId, maxIndex);
-                    } else {
-                        mapState.marker.setPosition(mapState.pathCoords[mapState.index]);
-                        scheduleSave(mapState.trackId, mapState.index);
-                    }
-                } else {
-                    // Safety net: already at/past target — freeze immediately
-                    mapState.index = maxIndex;
-                    mapState.marker.setPosition(mapState.pathCoords[maxIndex]);
-                    clearInterval(mapState.interval);
-                    mapState.interval = null;
-                    writeProgressToDB(mapState.trackId, maxIndex);
-                }
-            }, msPerStep);
-            return;
-        }
-
-        // ── STATIONARY statuses (no waypoint pause): freeze vehicle ──
-        const movingStatuses = ['in-transit', 'out-for-delivery', 'picked-up'];
-        if (!movingStatuses.includes(newStatus)) return;
-
-        // ── NORMAL MOVEMENT (no waypoint pause) ──
-        let targetPct;
-        if      (newStatus === 'picked-up')        targetPct = 5;
-        else if (newStatus === 'in-transit')       targetPct = 78;
-        else if (newStatus === 'out-for-delivery') targetPct = 96;
-        else                                        targetPct = 78;
-
-        const maxIndex = Math.floor((targetPct / 100) * (mapState.pathCoords.length - 1));
-        if (mapState.index >= maxIndex) return;
-
+        const totalSteps = mapState.pathCoords.length - 1;
+        let maxIndex;
         let msPerStep;
-        if      (newStatus === 'picked-up')        msPerStep = 80;
-        else if (newStatus === 'in-transit')       msPerStep = 120;
-        else if (newStatus === 'out-for-delivery') msPerStep = 50;
-        else                                        msPerStep = 120;
 
+        if (mapState.pauseAtIndex !== null) {
+            // Target is the pause waypoint
+            maxIndex = mapState.pauseAtIndex;
+            // Complete remaining distance in ~15 seconds
+            const stepsToGo = Math.max(1, maxIndex - mapState.index);
+            msPerStep = Math.max(20, Math.floor(15000 / stepsToGo));
+        } else {
+            // Normal targets based on status percentage
+            let targetPct;
+            if      (newStatus === 'picked-up')        targetPct = 5;
+            else if (newStatus === 'in-transit')       targetPct = 78;
+            else if (newStatus === 'out-for-delivery') targetPct = 96;
+            else if (newStatus === 'delivered')        targetPct = 100;
+            else                                        targetPct = 78;
+
+            maxIndex = Math.min(Math.floor((targetPct / 100) * totalSteps), totalSteps);
+
+            if      (newStatus === 'picked-up')        msPerStep = 80;
+            else if (newStatus === 'in-transit')       msPerStep = 120;
+            else if (newStatus === 'out-for-delivery') msPerStep = 50;
+            else if (newStatus === 'delivered')        msPerStep = 50; // fast animation to destination
+            else                                        msPerStep = 120;
+        }
+
+        // If the marker is already at or past the target, snap it and do not animate
+        if (mapState.index >= maxIndex) {
+            mapState.index = maxIndex;
+            mapState.marker.setPosition(mapState.pathCoords[maxIndex]);
+            writeProgressToDB(mapState.trackId, maxIndex);
+            return;
+        }
+
+        // Animate up to the maxIndex
         mapState.interval = setInterval(() => {
             if (mapState.index < maxIndex) {
                 mapState.index++;
-                // Hard-clamp: if we've hit or passed the target, stop exactly there
+                
+                // Hard-clamp: stop exactly on the target
                 if (mapState.index >= maxIndex) {
                     mapState.index = maxIndex;
                     mapState.marker.setPosition(mapState.pathCoords[maxIndex]);
@@ -571,7 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     scheduleSave(mapState.trackId, mapState.index);
                 }
             } else {
-                // Safety net: already at/past target — freeze immediately
+                // Safety net: freeze immediately
                 mapState.index = maxIndex;
                 mapState.marker.setPosition(mapState.pathCoords[maxIndex]);
                 clearInterval(mapState.interval);
