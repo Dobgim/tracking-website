@@ -513,12 +513,24 @@ document.addEventListener('DOMContentLoaded', () => {
             mapState.interval = setInterval(() => {
                 if (mapState.index < maxIndex) {
                     mapState.index++;
-                    mapState.marker.setPosition(mapState.pathCoords[mapState.index]);
-                    scheduleSave(mapState.trackId, mapState.index);
+                    // Hard-clamp: if we've hit or passed the pause point, stop exactly there
+                    if (mapState.index >= maxIndex) {
+                        mapState.index = maxIndex;
+                        mapState.marker.setPosition(mapState.pathCoords[maxIndex]);
+                        clearInterval(mapState.interval);
+                        mapState.interval = null;
+                        writeProgressToDB(mapState.trackId, maxIndex);
+                    } else {
+                        mapState.marker.setPosition(mapState.pathCoords[mapState.index]);
+                        scheduleSave(mapState.trackId, mapState.index);
+                    }
                 } else {
+                    // Safety net: already at/past target — freeze immediately
+                    mapState.index = maxIndex;
+                    mapState.marker.setPosition(mapState.pathCoords[maxIndex]);
                     clearInterval(mapState.interval);
                     mapState.interval = null;
-                    writeProgressToDB(mapState.trackId, mapState.index);
+                    writeProgressToDB(mapState.trackId, maxIndex);
                 }
             }, msPerStep);
             return;
@@ -547,12 +559,24 @@ document.addEventListener('DOMContentLoaded', () => {
         mapState.interval = setInterval(() => {
             if (mapState.index < maxIndex) {
                 mapState.index++;
-                mapState.marker.setPosition(mapState.pathCoords[mapState.index]);
-                scheduleSave(mapState.trackId, mapState.index);
+                // Hard-clamp: if we've hit or passed the target, stop exactly there
+                if (mapState.index >= maxIndex) {
+                    mapState.index = maxIndex;
+                    mapState.marker.setPosition(mapState.pathCoords[maxIndex]);
+                    clearInterval(mapState.interval);
+                    mapState.interval = null;
+                    writeProgressToDB(mapState.trackId, maxIndex);
+                } else {
+                    mapState.marker.setPosition(mapState.pathCoords[mapState.index]);
+                    scheduleSave(mapState.trackId, mapState.index);
+                }
             } else {
+                // Safety net: already at/past target — freeze immediately
+                mapState.index = maxIndex;
+                mapState.marker.setPosition(mapState.pathCoords[maxIndex]);
                 clearInterval(mapState.interval);
                 mapState.interval = null;
-                writeProgressToDB(mapState.trackId, mapState.index);
+                writeProgressToDB(mapState.trackId, maxIndex);
             }
         }, msPerStep);
     }
