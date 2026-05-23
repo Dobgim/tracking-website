@@ -154,12 +154,14 @@ document.addEventListener('DOMContentLoaded', () => {
         renderProgress(config.step);
 
         document.getElementById('invSender').textContent         = s.sender         || '—';
-        document.getElementById('invSenderEmail').textContent    = s.sender_email   || '—';
+        const cleanSenderEmail = (s.sender_email && s.sender_email !== 'dobgimajoshua52@gmail.com') ? s.sender_email : '';
+        document.getElementById('invSenderEmail').textContent    = cleanSenderEmail || '—';
         document.getElementById('invSenderNumber').textContent   = s.sender_number  || '—';
         document.getElementById('invOrigin').textContent         = s.origin         || '—';
 
         document.getElementById('invReceiver').textContent       = s.receiver       || '—';
-        document.getElementById('invReceiverEmail').textContent  = s.receiver_email || '—';
+        const cleanReceiverEmail = (s.receiver_email && s.receiver_email !== 'dobgimajoshua52@gmail.com') ? s.receiver_email : '';
+        document.getElementById('invReceiverEmail').textContent  = cleanReceiverEmail || '—';
         document.getElementById('invReceiverNumber').textContent = s.receiver_number|| '—';
         document.getElementById('invDestination').textContent    = s.destination    || '—';
 

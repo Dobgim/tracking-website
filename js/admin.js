@@ -343,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // ── Pause email: tell receiver shipment is on hold ──
             const rcvEmail = shipmentData.receiver_email || oldData?.receiver_email;
-            if (pauseIsNew && rcvEmail) {
+            if (pauseIsNew && rcvEmail && rcvEmail !== 'dobgimajoshua52@gmail.com') {
                 emailjs.send('service_vlwtmqa', 'template_g1eys3j', {
                     tracking_number: shipmentData.tracking_id,
                     to_name:   shipmentData.receiver || oldData?.receiver || 'Customer',
@@ -355,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // ── Resume email: tell receiver shipment is moving again ──
-            if (pauseRemoved && rcvEmail) {
+            if (pauseRemoved && rcvEmail && rcvEmail !== 'dobgimajoshua52@gmail.com') {
                 emailjs.send('service_vlwtmqa', 'template_g1eys3j', {
                     tracking_number: shipmentData.tracking_id,
                     to_name:   shipmentData.receiver || oldData?.receiver || 'Customer',
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('Shipment created! Tracking ID: ' + shipmentData.tracking_id);
 
             // --- Send Shipment Creation Email to Sender ---
-            if (shipmentData.sender_email) {
+            if (shipmentData.sender_email && shipmentData.sender_email !== 'dobgimajoshua52@gmail.com') {
                 const senderParams = {
                     to_name: shipmentData.sender || 'Customer',
                     to_email: shipmentData.sender_email,
@@ -443,10 +443,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('shipTrackingId').value = s.tracking_id;
         document.getElementById('shipType').value = s.type || '';
         document.getElementById('shipSender').value = s.sender || '';
-        document.getElementById('shipSenderEmail').value = s.sender_email || '';
+        document.getElementById('shipSenderEmail').value = (s.sender_email && s.sender_email !== 'dobgimajoshua52@gmail.com') ? s.sender_email : '';
         document.getElementById('shipSenderNumber').value = s.sender_number || '';
         document.getElementById('shipReceiver').value = s.receiver || '';
-        document.getElementById('shipReceiverEmail').value = s.receiver_email || '';
+        document.getElementById('shipReceiverEmail').value = (s.receiver_email && s.receiver_email !== 'dobgimajoshua52@gmail.com') ? s.receiver_email : '';
         document.getElementById('shipReceiverNumber').value = s.receiver_number || '';
         document.getElementById('shipOrigin').value = s.origin || '';
         document.getElementById('shipDest').value = s.destination || '';
@@ -584,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- NEW CODE: Send Email Notification via EmailJS ---
         // Only send if the email exists and the status actually changed
-        if (s.receiver_email && s.status !== newStatus) {
+        if (s.receiver_email && s.receiver_email !== 'dobgimajoshua52@gmail.com' && s.status !== newStatus) {
             const templateParams = {
                 tracking_number: trackingId,
                 to_name: s.receiver || 'Customer',
